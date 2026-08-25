@@ -50,6 +50,12 @@ class WindowSmokeTests(unittest.TestCase):
                 else:
                     os.environ["LOCALAPPDATA"] = previous_data_dir
 
+    def test_flaticon_icon_assets_are_packaged(self) -> None:
+        from app.ui.main_window import _asset_path
+
+        for name in ("folder", "file", "scanner", "shield", "power", "delete", "vision"):
+            self.assertTrue(_asset_path(f"flaticon/{name}.png").is_file(), name)
+
     def _wait_until(self, predicate: object, timeout: float = 8.0) -> None:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:

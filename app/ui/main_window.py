@@ -6,8 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 
-from PySide6.QtCore import QThread, Qt
-from PySide6.QtGui import QCloseEvent, QColor, QPixmap
+from PySide6.QtCore import QSize, QThread, Qt
+from PySide6.QtGui import QCloseEvent, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -54,9 +54,14 @@ class TitleBar(QFrame):
         layout.setContentsMargins(20, 0, 12, 0)
         layout.setSpacing(8)
         icon = QLabel(self)
-        shield_asset = _asset_path("title-shield.png")
+        icon.setObjectName("titleIcon")
+        icon.setFixedSize(QSize(30, 30))
+        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        shield_asset = _asset_path("flaticon/shield.png")
+        if not shield_asset.is_file():
+            shield_asset = _asset_path("title-shield.png")
         if shield_asset.is_file():
-            icon.setPixmap(QPixmap(str(shield_asset)))
+            icon.setPixmap(QPixmap(str(shield_asset)).scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         else:
             shield = getattr(QStyle.StandardPixmap, "SP_VistaShield", QStyle.StandardPixmap.SP_DialogApplyButton)
             icon.setPixmap(self.style().standardIcon(shield).pixmap(28, 28))
@@ -179,9 +184,9 @@ class MainWindow(QMainWindow):
         group = QGroupBox(TEXT["select_target"], self)
         layout = QVBoxLayout(group)
         top = QHBoxLayout()
-        folder = self._button(TEXT["select_folder"], QStyle.StandardPixmap.SP_DirOpenIcon)
+        folder = self._button(TEXT["select_folder"], "folder", QStyle.StandardPixmap.SP_DirOpenIcon)
         folder.clicked.connect(self.choose_folder)
-        files = self._button(TEXT["select_files"], QStyle.StandardPixmap.SP_FileIcon)
+        files = self._button(TEXT["select_files"], "file", QStyle.StandardPixmap.SP_FileIcon)
         files.clicked.connect(self.choose_files)
         top.addWidget(folder)
         top.addWidget(files)
@@ -209,11 +214,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.file_table, 1)
 
         actions = QHBoxLayout()
-        add = self._button(TEXT["add_files"], QStyle.StandardPixmap.SP_FileDialogNewFolder)
+        add = self._button(TEXT["add_files"], "file", QStyle.StandardPixmap.SP_FileDialogNewFolder)
         add.clicked.connect(self.choose_files)
-        remove = self._button(TEXT["remove_selected"], QStyle.StandardPixmap.SP_TrashIcon)
+        remove = self._button(TEXT["remove_selected"], "delete", QStyle.StandardPixmap.SP_TrashIcon)
         remove.clicked.connect(self.remove_checked_files)
-        clear = self._button(TEXT["remove_all"], QStyle.StandardPixmap.SP_TrashIcon)
+        clear = self._button(TEXT["remove_all"], "delete", QStyle.StandardPixmap.SP_TrashIcon)
         clear.clicked.connect(self.clear_files)
         actions.addWidget(add)
         actions.addWidget(remove)
@@ -229,15 +234,15 @@ class MainWindow(QMainWindow):
         panel = QWidget(self)
         layout = QVBoxLayout(panel)
         actions = QHBoxLayout()
-        self.analysis_button = self._button(TEXT["start_analysis"], QStyle.StandardPixmap.SP_MediaPlay, "primaryButton")
+        self.analysis_button = self._button(TEXT["start_analysis"], "scanner", QStyle.StandardPixmap.SP_MediaPlay, "primaryButton")
         self.analysis_button.setMinimumHeight(50)
         self.analysis_button.setEnabled(False)
         self.analysis_button.clicked.connect(self.start_analysis)
-        self.deidentify_button = self._button(TEXT["run_deid"], QStyle.StandardPixmap.SP_DialogApplyButton, "secondaryButton")
+        self.deidentify_button = self._button(TEXT["run_deid"], "shield", QStyle.StandardPixmap.SP_DialogApplyButton, "secondaryButton")
         self.deidentify_button.setMinimumHeight(50)
         self.deidentify_button.setEnabled(False)
         self.deidentify_button.clicked.connect(self.start_deidentification)
-        self.stop_button = self._button(TEXT["stop"], QStyle.StandardPixmap.SP_MediaStop)
+        self.stop_button = self._button(TEXT["stop"], "power", QStyle.StandardPixmap.SP_MediaStop)
         self.stop_button.setMinimumHeight(50)
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.request_stop)
@@ -367,18 +372,31 @@ class MainWindow(QMainWindow):
         note.setObjectName("subtleText")
         footer.addWidget(note)
         footer.addStretch()
-        whole = self._button(TEXT["view_full_preview"], QStyle.StandardPixmap.SP_FileDialogDetailedView)
+        whole = self._button(TEXT["view_full_preview"], "vision", QStyle.StandardPixmap.SP_FileDialogDetailedView)
         whole.clicked.connect(self.show_full_preview)
         footer.addWidget(whole)
         layout.addLayout(footer)
         return group
 
-    def _button(self, text: str, pixmap: QStyle.StandardPixmap, object_name: str = "") -> QPushButton:
+    def _button(self, text: str, icon_name: str, fallback: QStyle.StandardPixmap, object_name: str = "") -> QPushButton:
         button = QPushButton(text, self)
-        button.setIcon(self.style().standardIcon(pixmap))
+        color = "#ffffff" if object_name == "primaryButton" else "#1768d4"
+        button.setIcon(self._icon(icon_name, fallback, color))
+        button.setIconSize(QSize(18, 18))
         if object_name:
             button.setObjectName(object_name)
         return button
+
+    def _icon(self, icon_name: str, fallback: QStyle.StandardPixmap, color: str = "#1768d4") -> QIcon:
+        asset = _asset_path(f"flaticon/{icon_name}.png")
+        if not asset.is_file():
+            return self.style().standardIcon(fallback)
+        pixmap = QPixmap(str(asset))
+        painter = QPainter(pixmap)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        painter.fillRect(pixmap.rect(), QColor(color))
+        painter.end()
+        return QIcon(pixmap)
 
     @staticmethod
     def _detail(text: str) -> QLabel:
@@ -483,7 +501,8 @@ class MainWindow(QMainWindow):
                 self.file_table.setItem(row, 2, size)
                 self.file_table.setItem(row, 3, QTableWidgetItem(demo_detail[1] if demo_detail else "-"))
             remove = QToolButton(self.file_table)
-            remove.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarCloseButton))
+            remove.setIcon(self._icon("delete", QStyle.StandardPixmap.SP_TitleBarCloseButton))
+            remove.setIconSize(QSize(16, 16))
             remove.clicked.connect(lambda _checked=False, target=path: self._remove_path(target))
             self.file_table.setCellWidget(row, 4, remove)
         self._updating_files = False
@@ -799,8 +818,9 @@ class MainWindow(QMainWindow):
         return """
             QMainWindow, QWidget { background: #f8fafc; color: #172033; font-family: 'Segoe UI', 'Malgun Gothic'; font-size: 13px; }
             QFrame#titleBar { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1765c9, stop:1 #0e4a9d); }
-            QLabel#titleLabel { color: white; font-size: 20px; font-weight: 700; }
-            QLabel#versionLabel { color: #dbeafe; font-size: 14px; }
+            QLabel#titleIcon { background: rgba(255, 255, 255, 0.96); border-radius: 8px; }
+            QLabel#titleLabel { color: white; background: transparent; font-size: 20px; font-weight: 700; }
+            QLabel#versionLabel { color: #dbeafe; background: transparent; font-size: 14px; }
             QToolButton#titleButton { border: 0; padding: 10px; background: transparent; }
             QToolButton#titleButton:hover { background: #093775; }
             QGroupBox { background: white; border: 1px solid #d7e1ef; border-radius: 6px; margin-top: 13px; padding: 10px 0; font-weight: 700; }

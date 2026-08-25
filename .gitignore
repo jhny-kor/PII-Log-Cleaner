@@ -16,5 +16,6 @@ models/schift-ko-pii-v6/*
 artifacts/*
 !artifacts/ui-implementation-1536x1024-v7.png
 !artifacts/design-comparison-3072x1024-v7.png
+!artifacts/ui-sample-flaticon-1536x1024.png
 
 .DS_Store
