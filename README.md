@@ -1,33 +1,48 @@
 # PII Log Cleaner
 
-Offline Windows desktop app for analyzing log/text files before generating separate de-identified outputs.
+로그·텍스트 파일을 분석한 뒤 원본과 분리된 비식별화 결과를 만드는 오프라인 Windows 데스크톱 프로그램입니다.
 
-## What is implemented
+## 주요 기능
 
-- PySide6 single-screen UI matching the supplied layout: file/folder selection, 11 detection toggles, masking choices, execution summary, history, and a three-column preview.
-- Regex detection for RRN-form values, Korean phone numbers, email, IPv4, URL, date, account key-values, and API-key/password key-values; offset-based overlap resolution and replacement.
-- Optional bundled `schift-ko-pii-v6` local model adapter. The app sets `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` before model imports; it never downloads at runtime.
-- Streaming analysis/de-identification, separate `_deid` outputs, optional original backups, CSV aggregate report, and PII-minimizing local SQLite history.
+- 제공된 화면 구성을 반영한 PySide6 단일 화면 UI: 파일/폴더 선택, 11개 탐지 항목, 치환 방식, 실행 요약, 이력, 3열 미리보기
+- 주민등록번호 형식, 국내 전화번호, 이메일, IPv4, URL, 날짜, 계좌번호 문맥값, API 키/비밀번호 문맥값의 정규식 탐지
+- 위치 기반 중첩 해결과 치환으로 원문 일부가 잘못 바뀌지 않도록 처리
+- 로컬 `schift-ko-pii-v6` 모델 어댑터: 실행 전에 `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`을 설정하며 실행 중 모델을 내려받지 않음
+- 스트리밍 분석·비식별화, 별도 `_deid` 출력, 선택적 원본 백업, CSV 집계 보고서, PII를 저장하지 않는 로컬 SQLite 실행 이력
 
-## Windows build: one installer EXE
+## 모델도 설치파일에 포함되나요?
 
-Prerequisites on the Windows build machine:
+네. **Windows 빌드 시 `-ModelPath`로 전달한 로컬 모델 스냅샷은 최종 `PII-Log-Cleaner-Setup.exe` 안에 포함됩니다.**
 
-1. 64-bit Python 3.11 (or another supported 3.10+ interpreter) and Inno Setup 6.
-2. A licensed local snapshot of `schift-ko-pii-v6`, including `config.json`, `tokenizer.json`, `tokenizer_config.json`, `model.safetensors`, `modeling_lfm2_bidirectional.py`, and `LICENSE*`.
+빌드 스크립트는 필수 모델 파일과 `LICENSE*`를 먼저 검사하고, PyInstaller의 `--add-data`로 `models\schift-ko-pii-v6` 경로에 복사합니다. 이후 Inno Setup이 PyInstaller 결과 폴더 전체를 하나의 설치파일로 묶습니다. 설치된 프로그램은 번들 모델만 읽으며 인터넷에서 모델을 받지 않습니다.
 
-Run from PowerShell:
+다만 모델 가중치와 라이선스 파일은 용량·배포 권한 문제로 이 GitHub 저장소에는 넣지 않았습니다. 안전한 Windows 빌드 머신에 라이선스가 있는 모델 스냅샷을 준비해야 하며, 모델이 없거나 필수 파일이 빠지면 빌드는 중단됩니다. 모델과 런타임이 함께 들어가므로 설치파일 크기는 커집니다.
+
+## Windows에서 단일 설치파일 만들기
+
+빌드 머신 준비물:
+
+1. 64비트 Python 3.11 권장(3.10 이상 지원)과 Inno Setup 6
+2. 라이선스가 포함된 `schift-ko-pii-v6` 로컬 스냅샷
+   - `config.json`
+   - `tokenizer.json`
+   - `tokenizer_config.json`
+   - `model.safetensors`
+   - `modeling_lfm2_bidirectional.py`
+   - `LICENSE*`
+
+PowerShell에서 실행합니다.
 
 ```powershell
 .\build-windows.ps1 -ModelPath C:\secure-build-assets\schift-ko-pii-v6
 ```
 
-The script creates `dist\PII-Log-Cleaner-Setup.exe`. It deliberately uses PyInstaller `onedir` internally—so the 136 MB model is installed normally rather than unpacked to a temporary directory every launch—then Inno Setup produces the single installer the user receives.
+완료되면 `dist\PII-Log-Cleaner-Setup.exe` 한 개가 만들어집니다. 내부적으로는 PyInstaller `onedir` 구조를 사용해 모델을 설치 폴더에 정상 배치한 뒤, Inno Setup이 이를 단일 설치파일로 만듭니다.
 
-## Local core checks
+## 로컬 검사
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-`--demo --allow-regex-only` are development-only flags for previewing the UI without a bundled model. They are not used by the Windows installer path.
+`--demo`, `--allow-regex-only`는 번들 모델 없이 UI를 확인하기 위한 개발 전용 옵션이며 Windows 설치 경로에서는 사용하지 않습니다.

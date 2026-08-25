@@ -1,43 +1,43 @@
-# Design QA
+# 디자인 QA
 
-## Comparison target
+## 비교 기준
 
-- Source visual truth: supplied visual reference (kept outside this repository)
-- Implementation capture: `artifacts/ui-implementation-1536x1024-v7.png`
-- Side-by-side evidence (source left, implementation right): `artifacts/design-comparison-3072x1024-v7.png`
-- Viewport/state: 1536 × 1024 px, desktop, light theme, populated demo state matching the supplied mock.
-- Density normalization: both captures are 1536 × 1024 px at Qt offscreen scale 1; no resampling was used.
+- 원본 기준: 제공받은 시각 참고 자료(저장소에는 포함하지 않음)
+- 구현 캡처: `artifacts/ui-implementation-1536x1024-v7.png`
+- 좌우 비교 자료(왼쪽 원본, 오른쪽 구현): `artifacts/design-comparison-3072x1024-v7.png`
+- 화면 상태: 1536 × 1024 px, 데스크톱, 라이트 테마, 제공된 목업과 동일한 데모 데이터
+- 밀도 보정: 두 캡처 모두 Qt 오프스크린 배율 1에서 1536 × 1024 px로 캡처했으며 리샘플링하지 않음
 
-## Findings
+## 결과
 
-No actionable P0, P1, or P2 differences remain in the matched demo state.
+비교한 데모 상태에서 조치가 필요한 P0, P1, P2 차이는 없습니다.
 
-- [P3] Window-control glyphs follow the host platform in the macOS offscreen capture rather than the reference's white Windows glyphs. The release target is Windows, and the implementation provides functioning minimize, maximize, and close controls; the brief expressly permits OS-default title-bar controls.
-- [P3] The report detail says CSV rather than `HTML/CSV`. This reflects the shipped CSV-only report path, which satisfies the requirement to support CSV *or* HTML and avoids exposing a control for an unavailable format.
+- [P3] macOS 오프스크린 캡처에서는 창 제어 아이콘이 호스트 플랫폼 모양으로 보이고, 참고 이미지의 흰색 Windows 아이콘과 약간 다릅니다. 배포 대상은 Windows이며 최소화·최대화·닫기 기능은 동작합니다. 지시서에서도 OS 기본 제목 표시줄 제어를 허용합니다.
+- [P3] 보고서 설명은 `HTML/CSV`가 아니라 CSV만 표기합니다. 요구사항은 CSV 또는 HTML 지원이므로 실제 제공하는 CSV 경로만 노출했습니다.
 
-## Required fidelity surfaces
+## 확인한 핵심 영역
 
-- Fonts and typography: uses `Segoe UI` with `Malgun Gothic` fallback; hierarchy and Korean labels remain legible without wrapping in the reference-sized capture. Host font rasterization differs slightly from the supplied Windows capture.
-- Spacing and layout rhythm: title band, two-column top area, four middle panels, and bottom three-column preview use the same 1536 px composition; panel widths, vertical landmarks, row heights, and preview placement were adjusted against the side-by-side image.
-- Colors and visual tokens: blue primary header/actions, white and `#F8FAFC` surfaces, muted borders, green/blue/orange badges, and red/blue summary totals match the intended semantic palette.
-- Image quality and asset fidelity: the title shield is an exact crop of the supplied shield asset at `resources/icons/title-shield.png`; no inline SVG, CSS art, or placeholder was used. Remaining interface icons are platform-native controls.
-- Copy and content: the 11 detection labels, masking wording, options, summaries, history, and preview labels match the Korean brief. Demo row values mirror the reference only in `--demo` mode; the normal app starts empty.
+- 글꼴과 타이포그래피: `Segoe UI`, `Malgun Gothic` 대체 글꼴을 사용합니다. 참고 해상도에서 한국어 레이블이 줄바꿈 없이 읽히도록 했습니다. 호스트에 따라 글꼴 래스터화에는 미세한 차이가 있을 수 있습니다.
+- 여백과 배치: 제목 영역, 상단 2열, 중간 4개 패널, 하단 3열 미리보기를 동일한 1536 px 구성으로 배치했습니다. 패널 너비, 세로 기준선, 행 높이, 미리보기 위치를 좌우 비교에 맞춰 조정했습니다.
+- 색상: 파란색 제목·주요 동작, 흰색·`#F8FAFC` 표면, 절제된 테두리, 녹색/파란색/주황색 배지, 빨간색/파란색 요약 수치를 적용했습니다.
+- 이미지 자산: 제목의 방패 아이콘은 제공받은 자산을 `resources/icons/title-shield.png`로 잘라 사용했습니다. 인라인 SVG·CSS 그림·대체 플레이스홀더는 사용하지 않았습니다.
+- 문구와 내용: 11개 탐지 항목, 치환 방식, 옵션, 요약, 이력, 미리보기 문구는 한국어 지시를 반영했습니다. 데모 데이터는 `--demo`에서만 표시되고 일반 실행은 빈 상태로 시작합니다.
 
-## Focused comparison evidence
+## 집중 비교 기록
 
-- Header/title region: checked the shield crop, title, version, primary actions, and title-bar controls in the combined capture.
-- Dense-grid region: checked file-list columns, execution summary alignment, four middle panels, history rows, preview columns, badge colors, and note/button placement in the combined capture.
+- 제목 영역: 방패 아이콘, 제목, 버전, 주요 동작 버튼, 제목 표시줄 제어를 확인했습니다.
+- 고밀도 표 영역: 파일 목록 열, 실행 요약 정렬, 중간 4개 패널, 이력 행, 미리보기 열, 배지 색상, 안내문·버튼 위치를 확인했습니다.
 
-## Comparison history
+## 비교 이력
 
-1. Initial capture `ui-implementation-1536x1024-v2.png` exposed P1 title-icon rendering and P2 differences in the middle-panel columns, ordering, badge colors, file metadata, and summary scrollbar.
-2. Replaced the unstable host shield with the supplied shield asset; aligned the title palette, middle panel widths/order, status coloring, demo metadata, badges, and summary overflow.
-3. Final capture `ui-implementation-1536x1024-v7.png` confirms the corrected composition in the same viewport and state after the final functional changes.
+1. 초기 캡처 `ui-implementation-1536x1024-v2.png`에서 제목 아이콘 P1, 중간 패널 열·순서·배지 색상·파일 메타데이터·요약 스크롤바 P2 차이를 확인했습니다.
+2. 불안정한 호스트 방패 아이콘을 제공된 방패 자산으로 교체하고, 제목 색상·중간 패널 너비/순서·상태 색상·데모 메타데이터·배지·요약 오버플로를 정렬했습니다.
+3. 최종 캡처 `ui-implementation-1536x1024-v7.png`에서 기능 변경 후 동일한 화면 크기와 상태로 수정된 구성을 확인했습니다.
 
-## Implementation checklist
+## 구현 확인 목록
 
-- [x] Source and rendered captures opened together and compared.
-- [x] Primary file selection, masking controls, analysis, preview, and de-identification paths are interactive.
-- [x] Final design capture retained with the project.
+- [x] 원본과 렌더링 캡처를 함께 열어 비교함
+- [x] 파일 선택, 치환 제어, 분석, 미리보기, 비식별화 경로가 상호작용함
+- [x] 최종 디자인 캡처를 프로젝트에 보관함
 
-final result: passed
+최종 결과: 통과
