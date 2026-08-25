@@ -1,0 +1,1 @@
+"""Safe aggregate reports only."""

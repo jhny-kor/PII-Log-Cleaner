@@ -1,0 +1,20 @@
+# Local Python environments and bytecode
+.venv/
+__pycache__/
+*.py[cod]
+
+# Build output
+build/
+dist/
+*.spec
+
+# Bundled-model snapshots are supplied on the secure Windows build machine.
+models/schift-ko-pii-v6/*
+!models/schift-ko-pii-v6/README.md
+
+# Keep only the final UI verification evidence.
+artifacts/*
+!artifacts/ui-implementation-1536x1024-v7.png
+!artifacts/design-comparison-3072x1024-v7.png
+
+.DS_Store
