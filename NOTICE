@@ -1,0 +1,10 @@
+PII Log Cleaner
+Copyright 2026 jhny-kor
+
+PII Log Cleaner's original source code is licensed under Apache License 2.0.
+Third-party components, icons, and the bundled model retain their own licenses.
+See THIRD_PARTY_NOTICES.md for the applicable third-party notices.
+
+The bundled schift-io/schift-ko-pii-v6 model is governed by Schift License v2.0,
+not Apache License 2.0. Its unmodified LICENSE file must remain with each model
+snapshot and installer distribution.

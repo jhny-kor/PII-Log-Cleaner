@@ -2,6 +2,10 @@
 
 로그·텍스트 파일을 분석한 뒤 원본과 분리된 비식별화 결과를 만드는 오프라인 Windows 데스크톱 프로그램입니다.
 
+## 라이선스
+
+PII Log Cleaner의 자체 작성 소스 코드와 문서는 [Apache License 2.0](LICENSE) (`Apache-2.0`)으로 배포합니다. 다만 `resources/icons/flaticon/`, Python 의존성, 번들 모델은 각각 별도 라이선스가 적용되며 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 함께 확인해야 합니다.
+
 ## 화면 예시
 
 ![Flaticon 아이콘을 적용한 PII Log Cleaner 화면](artifacts/ui-sample-flaticon-1536x1024.png)
@@ -23,6 +27,12 @@
 빌드 스크립트는 필수 모델 파일과 `LICENSE*`를 먼저 검사하고, PyInstaller의 `--add-data`로 `models\schift-ko-pii-v6` 경로에 복사합니다. 이후 Inno Setup이 PyInstaller 결과 폴더 전체를 하나의 설치파일로 묶습니다. 설치된 프로그램은 번들 모델만 읽으며 인터넷에서 모델을 받지 않습니다.
 
 다만 모델 가중치와 라이선스 파일은 용량·배포 권한 문제로 이 GitHub 저장소에는 넣지 않았습니다. 안전한 Windows 빌드 머신에 라이선스가 있는 모델 스냅샷을 준비해야 하며, 모델이 없거나 필수 파일이 빠지면 빌드는 중단됩니다. 모델과 런타임이 함께 들어가므로 설치파일 크기는 커집니다.
+
+## 모델 라이선스와 배포 조건
+
+`schift-io/schift-ko-pii-v6` 모델은 **Apache-2.0이 아닌 [Schift License v2.0](https://huggingface.co/schift-io/schift-ko-pii-v6/blob/main/LICENSE)**으로 배포됩니다. 이 라이선스는 Apache License 2.0을 기반으로 하지만, 최근 완료 회계연도 기준 연 매출이 미화 1,000만 달러를 초과하는 법인의 상업적 사용에는 별도 상용 라이선스를 요구하는 추가 조건이 있습니다. 연구·교육·평가·개인 프로젝트·비영리 단체 사용은 매출과 무관하게 허용된다고 모델 라이선스에 명시되어 있습니다.
+
+따라서 이 저장소의 `Apache-2.0` 표기는 PII Log Cleaner의 자체 작성 코드·문서에만 적용되며, 모델 가중치·모델 코드에는 적용되지 않습니다. Windows 설치파일을 배포할 때는 모델 스냅샷에 포함된 원본 `LICENSE*` 파일을 변경하지 않고 함께 포함해야 합니다. 빌드 스크립트가 이를 확인하며, 상세 고지는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 제공합니다. 모델 라이선스는 배포 전 해당 스냅샷의 원문으로 다시 확인하세요.
 
 ## Windows에서 단일 설치파일 만들기
 

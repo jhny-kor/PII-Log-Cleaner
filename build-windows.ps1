@@ -14,6 +14,9 @@ $PyInstallerDist = Join-Path $BuildRoot "pyinstaller"
 $Requirements = Join-Path $ProjectRoot "requirements.txt"
 $EntryPoint = Join-Path $ProjectRoot "app\main.py"
 $InstallerScript = Join-Path $ProjectRoot "installer\PII-Log-Cleaner.iss"
+$ProjectLicense = Join-Path $ProjectRoot "LICENSE"
+$ProjectNotice = Join-Path $ProjectRoot "NOTICE"
+$ThirdPartyNotices = Join-Path $ProjectRoot "THIRD_PARTY_NOTICES.md"
 
 function Resolve-Python {
     if ($PythonExe) {
@@ -78,6 +81,10 @@ if ($script:PythonCommand -eq "py.exe") {
 if ($LASTEXITCODE -ne 0) { throw "64-bit Python 3.10 이상이 필요합니다." }
 
 Assert-ModelSnapshot (Resolve-Path $ModelPath)
+$missingLegalFiles = @($ProjectLicense, $ProjectNotice, $ThirdPartyNotices) | Where-Object { -not (Test-Path $_ -PathType Leaf) }
+if ($missingLegalFiles) {
+    throw "배포 고지 파일이 없습니다: $($missingLegalFiles -join ', ')"
+}
 New-Item -ItemType Directory -Force -Path $BuildRoot, $PyInstallerWork, $PyInstallerDist | Out-Null
 
 if (-not (Test-Path (Join-Path $VenvRoot "Scripts\python.exe"))) {
@@ -105,7 +112,9 @@ $ModelSnapshot = (Resolve-Path $ModelPath).Path
     --specpath $BuildRoot `
     --add-data "$ModelSnapshot;models\schift-ko-pii-v6" `
     --add-data "$(Join-Path $ProjectRoot 'resources');resources" `
-    --add-data "$(Join-Path $ProjectRoot 'THIRD_PARTY_NOTICES.md');." `
+    --add-data "$ProjectLicense;." `
+    --add-data "$ProjectNotice;." `
+    --add-data "$ThirdPartyNotices;." `
     --collect-all PySide6 `
     --collect-all schift_ko_pii `
     --hidden-import transformers.models.lfm2 `
