@@ -196,7 +196,7 @@ $AppExe = Join-Path $PyInstallerDist "PII\PII.exe"
 if (-not (Test-Path $AppExe -PathType Leaf)) { throw "빌드된 실행 파일을 찾지 못했습니다: $AppExe" }
 
 $Iscc = Resolve-Iscc
-& $Iscc "--output-dir=$InstallerOutputDir" $InstallerScript
+& $Iscc $InstallerScript
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup 빌드에 실패했습니다." }
 
 $Installer = Join-Path $InstallerOutputDir "PII-Log-Cleaner-Setup.exe"
