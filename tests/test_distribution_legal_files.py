@@ -47,6 +47,12 @@ class DistributionLegalFilesTests(unittest.TestCase):
                     digest.update(block)
         self.assertEqual(expected, digest.hexdigest())
 
+    def test_transformers_and_hub_requirements_use_compatible_versions(self) -> None:
+        requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+
+        self.assertIn("transformers==5.15.0", requirements)
+        self.assertIn("huggingface-hub>=1.5,<2", requirements)
+
 
 if __name__ == "__main__":
     unittest.main()
