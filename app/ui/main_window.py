@@ -39,6 +39,7 @@ from app.core.masker import MaskingMode
 from app.core.models import Detection, PreviewRow, RunResult
 from app.core.policies import SUPPORTED_EXTENSIONS, TYPE_LABELS, UI_TYPE_TO_CODES, enabled_codes, is_supported_file
 from app.processing.worker import EngineInitWorker, ProcessingWorker
+from app.runtime import bundle_root
 from app.storage.history import HistoryStore
 from resources.strings import TEXT
 
@@ -866,10 +867,11 @@ def launch(model_dir: Path, allow_regex_only: bool = False, demo: bool = False) 
 
 
 def _asset_path(name: str) -> Path:
-    root = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[2]
-    return root / "resources" / "icons" / name
+    return bundle_root() / "resources" / "icons" / name
 
 
 def _application_icon() -> QIcon:
-    asset = _asset_path("branding/pii-log-cleaner-icon.png")
+    asset = _asset_path("branding/pii-log-cleaner-icon.ico")
+    if not asset.is_file():
+        asset = _asset_path("branding/pii-log-cleaner-icon.png")
     return QIcon(str(asset)) if asset.is_file() else QIcon()

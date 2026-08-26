@@ -39,6 +39,7 @@ class DistributionLegalFilesTests(unittest.TestCase):
         self.assertIn("SetupIconFile=..\\resources\\icons\\branding\\pii-log-cleaner-icon.ico", installer_script)
         self.assertIn('#define MyAppExeName "PII.exe"', installer_script)
         self.assertIn('Source: "..\\build\\p\\PII\\*"', installer_script)
+        self.assertNotIn("IconFilename=", installer_script)
 
     def test_bundled_model_parts_match_the_recorded_sha256(self) -> None:
         model_dir = ROOT / "models" / "schift-ko-pii-v6"

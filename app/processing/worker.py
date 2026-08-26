@@ -30,6 +30,7 @@ class EngineInitWorker(QObject):
             detector = PIIDetector(self.model_dir, self.allow_regex_only)
             detector.initialize()
         except Exception:
+            app_logger.exception("모델 초기화 실패")
             self.failed.emit("개인정보 탐지 엔진을 초기화하지 못했습니다.")
             return
         app_logger.info("모델 초기화 성공")

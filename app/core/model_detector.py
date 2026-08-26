@@ -52,7 +52,9 @@ class OfflineSchiftDetector:
             try:
                 module = importlib.import_module("schift_ko_pii.detect")
                 module.HF_MODEL_ID = str(self.model_dir)
-                module.hf_hub_download = self._local_model_file
+                # schift-ko-pii imports this function inside _load_model.
+                hub = importlib.import_module("huggingface_hub")
+                hub.hf_hub_download = self._local_model_file
                 self._force_local_loading(module, "AutoTokenizer")
                 self._force_local_loading(module, "AutoConfig")
                 loader = getattr(module, "_load_model", None)
