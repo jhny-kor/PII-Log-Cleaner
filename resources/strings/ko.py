@@ -1,6 +1,6 @@
 TEXT = {
     "app_title": "PII Log Cleaner",
-    "version": "v1.0.1",
+    "version": "v1.0.2",
     "select_target": "1. 대상 선택",
     "select_folder": "폴더 선택",
     "select_files": "파일 선택",
@@ -9,6 +9,7 @@ TEXT = {
     "remove_all": "전체 제거",
     "selected_files": "선택된 파일 수: {count}개",
     "supported_formats": "* 지원 형식: .log, .txt, .out, .csv, .sql",
+    "drag_drop_hint": "파일 또는 폴더를 목록으로 끌어 놓을 수 있습니다.",
     "file_path": "파일 경로",
     "size": "크기",
     "modified": "수정한 날짜",

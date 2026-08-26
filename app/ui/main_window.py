@@ -6,8 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 
-from PySide6.QtCore import QSize, QThread, Qt
-from PySide6.QtGui import QCloseEvent, QColor, QIcon, QPainter, QPixmap
+from PySide6.QtCore import QSize, QThread, Qt, Signal
+from PySide6.QtGui import QCloseEvent, QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -44,6 +44,56 @@ from app.storage.history import HistoryStore
 from resources.strings import TEXT
 
 from .history_dialog import HistoryDialog
+
+
+class FileDropTable(QTableWidget):
+    paths_dropped = Signal(list)
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.setAcceptDrops(True)
+        self.viewport().setAcceptDrops(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
+        self.setDropIndicatorShown(False)
+
+    @staticmethod
+    def _local_paths(event: QDropEvent) -> list[Path]:
+        return [Path(url.toLocalFile()) for url in event.mimeData().urls() if url.isLocalFile() and url.toLocalFile()]
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        if self._local_paths(event):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        if self._local_paths(event):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        paths = self._local_paths(event)
+        if not paths:
+            event.ignore()
+            return
+        self.paths_dropped.emit(paths)
+        event.acceptProposedAction()
+
+
+def _expand_targets(targets: list[Path], include_subfolders: bool) -> tuple[list[Path], bool]:
+    paths: list[Path] = []
+    had_access_error = False
+    for target in targets:
+        if not target.is_dir():
+            paths.append(target)
+            continue
+        try:
+            candidates = target.rglob("*") if include_subfolders else target.iterdir()
+            paths.extend(path for path in candidates if is_supported_file(path))
+        except OSError:
+            had_access_error = True
+    return paths, had_access_error
 
 
 class TitleBar(QFrame):
@@ -205,10 +255,12 @@ class MainWindow(QMainWindow):
         top.addWidget(self.selected_files_label)
         layout.addLayout(top)
 
-        self.file_table = QTableWidget(0, 5, group)
+        self.file_table = FileDropTable(0, 5, group)
         self.file_table.setHorizontalHeaderLabels(["선택", TEXT["file_path"], TEXT["size"], TEXT["modified"], TEXT["remove"]])
         self._table_basics(self.file_table)
         self.file_table.itemChanged.connect(self._file_check_changed)
+        self.file_table.paths_dropped.connect(self.add_targets)
+        self.file_table.setToolTip(TEXT["drag_drop_hint"])
         header = self.file_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
@@ -233,7 +285,7 @@ class MainWindow(QMainWindow):
         actions.addWidget(remove)
         actions.addWidget(clear)
         actions.addStretch()
-        formats = QLabel(TEXT["supported_formats"], group)
+        formats = QLabel(f"{TEXT['supported_formats']} · {TEXT['drag_drop_hint']}", group)
         formats.setObjectName("subtleText")
         actions.addWidget(formats)
         layout.addLayout(actions)
@@ -440,17 +492,18 @@ class MainWindow(QMainWindow):
     def choose_files(self) -> None:
         filters = "지원 파일 (" + " ".join(f"*{extension}" for extension in SUPPORTED_EXTENSIONS) + ")"
         selected, _ = QFileDialog.getOpenFileNames(self, TEXT["select_files"], "", filters)
-        self.add_paths([Path(path) for path in selected])
+        self.add_targets([Path(path) for path in selected])
 
     def choose_folder(self) -> None:
         chosen = QFileDialog.getExistingDirectory(self, TEXT["select_folder"])
         if not chosen:
             return
-        folder = Path(chosen)
-        try:
-            candidates = folder.rglob("*") if self.recursive_box.isChecked() else folder.iterdir()
-            self.add_paths([path for path in candidates if is_supported_file(path)])
-        except PermissionError:
+        self.add_targets([Path(chosen)])
+
+    def add_targets(self, targets: list[Path]) -> None:
+        paths, had_access_error = _expand_targets(targets, self.recursive_box.isChecked())
+        self.add_paths(paths)
+        if had_access_error:
             self.status.showMessage(TEXT["permission_error"])
 
     def add_paths(self, paths: list[Path]) -> None:

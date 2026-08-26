@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 
 try:
+    from PySide6.QtCore import QMimeData, QPointF, QUrl, Qt
+    from PySide6.QtGui import QDropEvent
     from PySide6.QtWidgets import QApplication
 except ImportError:  # Core checks stay runnable without GUI dependencies.
     QApplication = None
@@ -62,6 +64,46 @@ class WindowSmokeTests(unittest.TestCase):
 
         for name in ("folder", "file", "scanner", "shield", "power", "delete", "vision"):
             self.assertTrue(_asset_path(f"flaticon/{name}.png").is_file(), name)
+
+    def test_dragged_files_and_folders_expand_using_recursive_option(self) -> None:
+        from app.ui.main_window import _expand_targets
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            top_level = root / "access.log"
+            nested = root / "archive" / "service.txt"
+            top_level.write_text("top", encoding="utf-8")
+            nested.parent.mkdir()
+            nested.write_text("nested", encoding="utf-8")
+
+            direct, had_error = _expand_targets([root], include_subfolders=False)
+            self.assertFalse(had_error)
+            self.assertEqual(direct, [top_level])
+
+            recursive, had_error = _expand_targets([root], include_subfolders=True)
+            self.assertFalse(had_error)
+            self.assertEqual(set(recursive), {top_level, nested})
+
+    def test_drop_table_emits_local_file_paths(self) -> None:
+        from app.ui.main_window import FileDropTable
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "access.log"
+            path.write_text("INFO", encoding="utf-8")
+            received: list[Path] = []
+            table = FileDropTable()
+            table.paths_dropped.connect(received.extend)
+            mime_data = QMimeData()
+            mime_data.setUrls([QUrl.fromLocalFile(str(path))])
+            event = QDropEvent(
+                QPointF(),
+                Qt.DropAction.CopyAction,
+                mime_data,
+                Qt.MouseButton.LeftButton,
+                Qt.KeyboardModifier.NoModifier,
+            )
+            table.dropEvent(event)
+            self.assertEqual(received, [path])
 
     def _wait_until(self, predicate: object, timeout: float = 8.0) -> None:
         deadline = time.monotonic() + timeout
