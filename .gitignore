@@ -8,9 +8,11 @@ build/
 dist/
 *.spec
 
-# Bundled-model snapshots are supplied on the secure Windows build machine.
-models/schift-ko-pii-v6/*
-!models/schift-ko-pii-v6/README.md
+# The source-controlled model is split below Git hosting file-size limits.
+# build-windows.ps1 verifies and restores the ignored original before packaging.
+models/schift-ko-pii-v6/.cache/
+models/schift-ko-pii-v6/model.safetensors
+models/schift-ko-pii-v6/*.partial
 
 # Keep only the final UI verification evidence.
 artifacts/*

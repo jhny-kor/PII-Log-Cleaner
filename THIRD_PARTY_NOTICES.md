@@ -1,6 +1,6 @@
 # 제3자 구성요소 고지
 
-- 설치파일은 빌드 스크립트에 전달된 라이선스 보유 `schift-ko-pii-v6` 모델 스냅샷을 포함합니다. 모델의 `LICENSE*` 파일은 필수이며 설치된 모델 폴더에도 함께 복사됩니다.
+- 설치파일은 저장소에 포함된 라이선스 보유 `schift-ko-pii-v6` 모델 스냅샷을 포함합니다. 원본 가중치는 Git 호스팅 파일 크기 제한에 맞춰 분할되며, 빌드 시 SHA-256 검증 후 복원됩니다. 모델의 `LICENSE*` 파일은 필수이며 설치된 모델 폴더에도 함께 복사됩니다.
 - PySide6, PyInstaller, PyTorch, Transformers, Safetensors, Hugging Face Hub, `schift-ko-pii`는 각 구성요소의 라이선스에 따라 설치됩니다. 배포 전 해당 라이선스와 모델 배포 조건을 검토해야 합니다.
 
 ## schift-ko-pii-v6 모델

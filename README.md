@@ -22,11 +22,11 @@ PII Log Cleaner의 자체 작성 소스 코드와 문서는 [Apache License 2.0]
 
 ## 모델도 설치파일에 포함되나요?
 
-네. **Windows 빌드 시 `-ModelPath`로 전달한 로컬 모델 스냅샷은 최종 `PII-Log-Cleaner-Setup.exe` 안에 포함됩니다.**
+네. **저장소에 포함된 로컬 모델 스냅샷은 최종 `PII-Log-Cleaner-Setup.exe` 안에 포함됩니다.**
 
-빌드 스크립트는 필수 모델 파일과 `LICENSE*`를 먼저 검사하고, PyInstaller의 `--add-data`로 `models\schift-ko-pii-v6` 경로에 복사합니다. 이후 Inno Setup이 PyInstaller 결과 폴더 전체를 하나의 설치파일로 묶습니다. 설치된 프로그램은 번들 모델만 읽으며 인터넷에서 모델을 받지 않습니다.
+모델 원본 파일은 Git 호스팅의 파일당 크기 제한을 넘지 않도록 저장소 안에서 50MB 조각으로 관리합니다. 빌드 스크립트가 SHA-256을 확인해 원본 `model.safetensors`를 자동 복원한 후, PyInstaller의 `--add-data`로 `models\schift-ko-pii-v6` 경로에 복사합니다. 이후 Inno Setup이 PyInstaller 결과 폴더 전체를 하나의 설치파일로 묶습니다. 설치된 프로그램은 번들 모델만 읽으며 인터넷에서 모델을 받지 않습니다.
 
-다만 모델 가중치와 라이선스 파일은 용량·배포 권한 문제로 이 GitHub 저장소에는 넣지 않았습니다. 안전한 Windows 빌드 머신에 라이선스가 있는 모델 스냅샷을 준비해야 하며, 모델이 없거나 필수 파일이 빠지면 빌드는 중단됩니다. 모델과 런타임이 함께 들어가므로 설치파일 크기는 커집니다.
+모델 가중치와 원본 `LICENSE` 파일도 저장소에 포함합니다. 모델과 런타임이 함께 들어가므로 설치파일 크기는 커집니다.
 
 ## 모델 라이선스와 배포 조건
 
@@ -39,29 +39,23 @@ PII Log Cleaner의 자체 작성 소스 코드와 문서는 [Apache License 2.0]
 빌드 머신 준비물:
 
 1. 64비트 Python 3.11 권장(3.10 이상 지원)과 Inno Setup 6
-2. 라이선스가 포함된 `schift-ko-pii-v6` 로컬 스냅샷
-   - `config.json`
-   - `tokenizer.json`
-   - `tokenizer_config.json`
-   - `model.safetensors`
-   - `modeling_lfm2_bidirectional.py`
-   - `LICENSE*`
 
 PowerShell에서 실행합니다.
 
 ```powershell
-.\build-windows.ps1 -ModelPath C:\secure-build-assets\schift-ko-pii-v6
+.\build-windows.ps1
 ```
 
 완료되면 `dist\PII-Log-Cleaner-Setup.exe` 한 개가 만들어집니다. 내부적으로는 PyInstaller `onedir` 구조를 사용해 모델을 설치 폴더에 정상 배치한 뒤, Inno Setup이 이를 단일 설치파일로 만듭니다.
 
-빌드 스크립트는 더 이상 `Python 3.11`만 고정 호출하지 않고 `py -3`으로 현재 설치된 64비트 Python 3.10 이상을 선택합니다. 여러 런타임이 있거나 자동 탐지가 실패하면 다음처럼 사용할 Python 실행 파일을 직접 지정할 수 있습니다.
+빌드 스크립트는 `py -3`이 실패해도 PATH의 `python`, `python.exe`, `python3`을 차례로 확인해 현재 설치된 64비트 Python 3.10 이상을 선택합니다. 여러 런타임이 있거나 자동 탐지가 실패하면 다음처럼 현재 `python -V`에서 보이는 실행 파일만 직접 지정할 수 있습니다.
 
 ```powershell
-.\build-windows.ps1 -PythonExe "C:\Python311\python.exe" -ModelPath C:\secure-build-assets\schift-ko-pii-v6
+$pythonExe = (Get-Command python -CommandType Application).Path
+.\build-windows.ps1 -PythonExe $pythonExe
 ```
 
-`py --list`에서 Python이 보이지 않으면 먼저 64비트 Python을 설치해야 합니다.
+`python -V`가 정상 출력되는데도 빌드가 실패했다면 위의 `-PythonExe` 방식으로 실행합니다. 모델 경로는 묻지 않으며, 누락되거나 변조된 모델 조각은 SHA-256 검증 단계에서 중단됩니다.
 
 ## 브랜딩 자산
 

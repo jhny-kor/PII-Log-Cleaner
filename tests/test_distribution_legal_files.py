@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import unittest
 from pathlib import Path
 
@@ -25,8 +26,26 @@ class DistributionLegalFilesTests(unittest.TestCase):
 
         self.assertIn('$script:PythonArguments = @("-3")', build_script)
         self.assertNotIn('"-3.11"', build_script)
+        self.assertIn('Get-PythonApplications @("python.exe", "python", "python3.exe", "python3")', build_script)
+        self.assertIn('Restore-ModelWeights $ModelSnapshot', build_script)
+        self.assertIn('Assert-ModelSnapshot $ModelSnapshot', build_script)
+        self.assertIn('Resolve-Path -LiteralPath $ModelSnapshot', build_script)
         self.assertIn("--icon $AppIcon", build_script)
         self.assertIn("SetupIconFile=..\\resources\\icons\\branding\\pii-log-cleaner-icon.ico", installer_script)
+
+    def test_bundled_model_parts_match_the_recorded_sha256(self) -> None:
+        model_dir = ROOT / "models" / "schift-ko-pii-v6"
+        parts = sorted(model_dir.glob("model.safetensors.part-*"))
+        expected = (model_dir / "model.safetensors.sha256").read_text(encoding="utf-8").split()[0]
+
+        self.assertGreater(len(parts), 0)
+        self.assertTrue(all(part.stat().st_size <= 50 * 1024 * 1024 for part in parts))
+        digest = hashlib.sha256()
+        for part in parts:
+            with part.open("rb") as stream:
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(block)
+        self.assertEqual(expected, digest.hexdigest())
 
 
 if __name__ == "__main__":
