@@ -31,7 +31,13 @@ class DistributionLegalFilesTests(unittest.TestCase):
         self.assertIn('Assert-ModelSnapshot $ModelSnapshot', build_script)
         self.assertIn('Resolve-Path -LiteralPath $ModelSnapshot', build_script)
         self.assertIn("--icon $AppIcon", build_script)
+        self.assertIn('$PyInstallerWork = Join-Path $BuildRoot "w"', build_script)
+        self.assertIn('$PyInstallerDist = Join-Path $BuildRoot "p"', build_script)
+        self.assertIn('--name "PII"', build_script)
+        self.assertIn('"--output-dir=$InstallerOutputDir"', build_script)
         self.assertIn("SetupIconFile=..\\resources\\icons\\branding\\pii-log-cleaner-icon.ico", installer_script)
+        self.assertIn('#define MyAppExeName "PII.exe"', installer_script)
+        self.assertIn('Source: "..\\build\\p\\PII\\*"', installer_script)
 
     def test_bundled_model_parts_match_the_recorded_sha256(self) -> None:
         model_dir = ROOT / "models" / "schift-ko-pii-v6"

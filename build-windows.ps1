@@ -8,8 +8,9 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = $PSScriptRoot
 $BuildRoot = Join-Path $ProjectRoot "build"
 $VenvRoot = Join-Path $BuildRoot ".venv"
-$PyInstallerWork = Join-Path $BuildRoot "pyinstaller-work"
-$PyInstallerDist = Join-Path $BuildRoot "pyinstaller"
+$PyInstallerWork = Join-Path $BuildRoot "w"
+$PyInstallerDist = Join-Path $BuildRoot "p"
+$InstallerOutputDir = Join-Path $ProjectRoot "dist"
 $Requirements = Join-Path $ProjectRoot "requirements.txt"
 $EntryPoint = Join-Path $ProjectRoot "app\main.py"
 $InstallerScript = Join-Path $ProjectRoot "installer\PII-Log-Cleaner.iss"
@@ -152,7 +153,7 @@ if ($missingLegalFiles) {
     throw "배포 고지 파일이 없습니다: $($missingLegalFiles -join ', ')"
 }
 if (-not (Test-Path $AppIcon -PathType Leaf)) { throw "앱 아이콘 파일을 찾지 못했습니다: $AppIcon" }
-New-Item -ItemType Directory -Force -Path $BuildRoot, $PyInstallerWork, $PyInstallerDist | Out-Null
+New-Item -ItemType Directory -Force -Path $BuildRoot, $PyInstallerWork, $PyInstallerDist, $InstallerOutputDir | Out-Null
 
 if (-not (Test-Path (Join-Path $VenvRoot "Scripts\python.exe"))) {
     Invoke-Python @("-m", "venv", $VenvRoot)
@@ -171,7 +172,7 @@ $env:HF_HUB_OFFLINE = "1"
 $env:TRANSFORMERS_OFFLINE = "1"
 & $VenvPython -m PyInstaller `
     --noconfirm --clean --windowed `
-    --name "PII Log Cleaner" `
+    --name "PII" `
     --icon $AppIcon `
     --paths $ProjectRoot `
     --workpath $PyInstallerWork `
@@ -191,13 +192,13 @@ $env:TRANSFORMERS_OFFLINE = "1"
     $EntryPoint
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller 빌드에 실패했습니다." }
 
-$AppExe = Join-Path $PyInstallerDist "PII Log Cleaner\PII Log Cleaner.exe"
+$AppExe = Join-Path $PyInstallerDist "PII\PII.exe"
 if (-not (Test-Path $AppExe -PathType Leaf)) { throw "빌드된 실행 파일을 찾지 못했습니다: $AppExe" }
 
 $Iscc = Resolve-Iscc
-& $Iscc $InstallerScript
+& $Iscc "--output-dir=$InstallerOutputDir" $InstallerScript
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup 빌드에 실패했습니다." }
 
-$Installer = Join-Path $ProjectRoot "dist\PII-Log-Cleaner-Setup.exe"
+$Installer = Join-Path $InstallerOutputDir "PII-Log-Cleaner-Setup.exe"
 if (-not (Test-Path $Installer -PathType Leaf)) { throw "설치 파일을 찾지 못했습니다: $Installer" }
 Write-Host "완료: $Installer"

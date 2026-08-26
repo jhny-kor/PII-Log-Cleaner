@@ -1,6 +1,6 @@
 #define MyAppName "PII Log Cleaner"
 #define MyAppVersion "1.0.0"
-#define MyAppExeName "PII Log Cleaner.exe"
+#define MyAppExeName "PII.exe"
 
 [Setup]
 AppId={{B3E5432B-07DF-44ED-97DE-06BA2C3D0C32}
@@ -21,7 +21,7 @@ SetupIconFile=..\resources\icons\branding\pii-log-cleaner-icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Files]
-Source: "..\build\pyinstaller\PII Log Cleaner\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\build\p\PII\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\resources\icons\branding\pii-log-cleaner-icon.ico"
