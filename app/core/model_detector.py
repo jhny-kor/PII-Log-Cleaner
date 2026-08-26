@@ -70,31 +70,30 @@ class OfflineSchiftDetector:
         if self._module is None:
             raise ModelUnavailableError("개인정보 탐지 엔진을 초기화하지 못했습니다.")
 
+        try:
+            # schift-ko-pii already tokenizes and overlaps long input internally.
+            items = self._module.detect(text, postprocess=False, normalize=False)
+        except Exception as exc:
+            raise ModelUnavailableError("개인정보 탐지 엔진을 초기화하지 못했습니다.") from exc
+
         findings: list[Detection] = []
-        # The model's own tokenizer-level overlap handles entities inside each window.
-        for start in range(0, len(text), 7_500):
-            chunk = text[start : start + 8_000]
-            try:
-                items = self._module.detect(chunk, postprocess=False, normalize=False)
-            except Exception as exc:
-                raise ModelUnavailableError("개인정보 탐지 엔진을 초기화하지 못했습니다.") from exc
-            for item in items:
-                label = self._LABELS.get(str(item.get("label", "")).lower())
-                if not label or label not in enabled:
-                    continue
-                local_start, local_end = int(item["start"]), int(item["end"])
-                if local_start < 0 or local_end <= local_start or local_end > len(chunk):
-                    continue
-                findings.append(
-                    Detection(
-                        label,
-                        chunk[local_start:local_end],
-                        start + local_start,
-                        start + local_end,
-                        float(item.get("score", 0.0)),
-                        "model",
-                    )
+        for item in items:
+            label = self._LABELS.get(str(item.get("label", "")).lower())
+            if not label or label not in enabled:
+                continue
+            start, end = int(item["start"]), int(item["end"])
+            if start < 0 or end <= start or end > len(text):
+                continue
+            findings.append(
+                Detection(
+                    label,
+                    text[start:end],
+                    start,
+                    end,
+                    float(item.get("score", 0.0)),
+                    "model",
                 )
+            )
         return resolve_overlaps(findings)
 
     def _local_model_file(self, _repo_id: str, filename: str, **_kwargs: object) -> str:

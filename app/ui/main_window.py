@@ -109,19 +109,21 @@ class TitleBar(QFrame):
         icon.setFixedSize(QSize(30, 30))
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon_asset = _asset_path("branding/pii-log-cleaner-icon.png")
-        if icon_asset.is_file():
-            icon.setPixmap(QPixmap(str(icon_asset)).scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        else:
+        icon_pixmap = QPixmap(str(icon_asset)) if icon_asset.is_file() else QPixmap()
+        if icon_pixmap.isNull():
             shield = getattr(QStyle.StandardPixmap, "SP_VistaShield", QStyle.StandardPixmap.SP_DialogApplyButton)
             icon.setPixmap(self.style().standardIcon(shield).pixmap(28, 28))
+        else:
+            icon.setPixmap(icon_pixmap.scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         layout.addWidget(icon)
         wordmark_asset = _asset_path("branding/pii-log-cleaner-wordmark.png")
-        if wordmark_asset.is_file():
+        wordmark_pixmap = QPixmap(str(wordmark_asset)) if wordmark_asset.is_file() else QPixmap()
+        if not wordmark_pixmap.isNull():
             wordmark = QLabel(self)
             wordmark.setObjectName("brandLogo")
             wordmark.setFixedSize(QSize(108, 44))
             wordmark.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            wordmark.setPixmap(QPixmap(str(wordmark_asset)).scaled(104, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            wordmark.setPixmap(wordmark_pixmap.scaled(104, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
             layout.addWidget(wordmark)
         else:
             title = QLabel(TEXT["app_title"], self)
@@ -453,11 +455,14 @@ class MainWindow(QMainWindow):
         if not asset.is_file():
             return self.style().standardIcon(fallback)
         pixmap = QPixmap(str(asset))
+        if pixmap.isNull():
+            return self.style().standardIcon(fallback)
         painter = QPainter(pixmap)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
         painter.fillRect(pixmap.rect(), QColor(color))
         painter.end()
-        return QIcon(pixmap)
+        icon = QIcon(pixmap)
+        return icon if not icon.isNull() else self.style().standardIcon(fallback)
 
     @staticmethod
     def _detail(text: str) -> QLabel:
@@ -920,11 +925,23 @@ def launch(model_dir: Path, allow_regex_only: bool = False, demo: bool = False) 
 
 
 def _asset_path(name: str) -> Path:
-    return bundle_root() / "resources" / "icons" / name
+    primary = bundle_root() / "resources" / "icons" / name
+    if primary.is_file() or not getattr(sys, "frozen", False):
+        return primary
+    executable_root = Path(sys.executable).resolve().parent
+    for root in (executable_root, executable_root / "_internal"):
+        candidate = root / "resources" / "icons" / name
+        if candidate.is_file():
+            return candidate
+    return primary
 
 
 def _application_icon() -> QIcon:
-    asset = _asset_path("branding/pii-log-cleaner-icon.ico")
-    if not asset.is_file():
-        asset = _asset_path("branding/pii-log-cleaner-icon.png")
-    return QIcon(str(asset)) if asset.is_file() else QIcon()
+    for name in ("branding/pii-log-cleaner-icon.ico", "branding/pii-log-cleaner-icon.png"):
+        asset = _asset_path(name)
+        if not asset.is_file():
+            continue
+        icon = QIcon(str(asset))
+        if not icon.isNull():
+            return icon
+    return QIcon()

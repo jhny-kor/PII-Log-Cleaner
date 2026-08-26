@@ -8,7 +8,7 @@ from pathlib import Path
 
 try:
     from PySide6.QtCore import QMimeData, QPointF, QUrl, Qt
-    from PySide6.QtGui import QDropEvent
+    from PySide6.QtGui import QDropEvent, QIcon
     from PySide6.QtWidgets import QApplication
 except ImportError:  # Core checks stay runnable without GUI dependencies.
     QApplication = None
@@ -60,10 +60,12 @@ class WindowSmokeTests(unittest.TestCase):
                     os.environ["LOCALAPPDATA"] = previous_data_dir
 
     def test_flaticon_icon_assets_are_packaged(self) -> None:
-        from app.ui.main_window import _asset_path
+        from app.ui.main_window import _application_icon, _asset_path
 
         for name in ("folder", "file", "scanner", "shield", "power", "delete", "vision"):
             self.assertTrue(_asset_path(f"flaticon/{name}.png").is_file(), name)
+            self.assertFalse(QIcon(str(_asset_path(f"flaticon/{name}.png"))).isNull(), name)
+        self.assertFalse(_application_icon().isNull())
 
     def test_dragged_files_and_folders_expand_using_recursive_option(self) -> None:
         from app.ui.main_window import _expand_targets

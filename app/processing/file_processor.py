@@ -37,10 +37,11 @@ class FileProcessor:
             for original, detections in self._segments(source):
                 self._check_stopped()
                 findings = resolve_overlaps(detections)
-                deidentified, replacements = self.masker.apply(original, findings, mode, custom_text)
-                analysis.replacements += replacements
+                analysis.replacements += len(findings)
                 self._add_counts(analysis, findings)
-                self._add_preview_rows(analysis, original, deidentified, findings, preview_limit)
+                if len(analysis.previews) < preview_limit:
+                    deidentified, _ = self.masker.apply(original, findings, mode, custom_text)
+                    self._add_preview_rows(analysis, original, deidentified, findings, preview_limit)
         return analysis
 
     def deidentify_file(self, path: Path, mode: str, custom_text: str, backup: bool) -> FileAnalysis:

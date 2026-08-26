@@ -12,6 +12,19 @@ from app.processing.file_processor import FileProcessor
 
 
 class CoreRegressionTests(unittest.TestCase):
+    def test_analysis_skips_full_masking_after_preview_limit(self) -> None:
+        class NoMaskingNeeded:
+            def apply(self, *_args: object, **_kwargs: object) -> tuple[str, int]:
+                raise AssertionError("미리보기 제한 이후에는 마스킹을 계산하면 안 됩니다.")
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "access.log"
+            source.write_text("phone=010-1234-5678\n", encoding="utf-8")
+            result = FileProcessor(
+                RegexDetector(), {"PHONE"}, NoMaskingNeeded(), threading.Event()
+            ).analyze_file(source, MaskingMode.AUTO, "", preview_limit=0)
+            self.assertEqual(result.replacements, 1)
+
     def test_regex_detection_skips_explicit_version_and_order_number(self) -> None:
         text = (
             "rrn=900101-1234567 phone=010-1234-5678 email=abc@example.com "

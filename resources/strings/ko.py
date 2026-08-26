@@ -1,6 +1,6 @@
 TEXT = {
     "app_title": "PII Log Cleaner",
-    "version": "v1.0.2",
+    "version": "v1.0.3",
     "select_target": "1. 대상 선택",
     "select_folder": "폴더 선택",
     "select_files": "파일 선택",

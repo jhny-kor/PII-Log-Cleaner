@@ -41,6 +41,22 @@ class RuntimePathTests(unittest.TestCase):
 
             self.assertEqual(loaded, [str(model_dir / "model.safetensors")])
 
+    def test_model_detector_uses_package_windowing_once_per_file_segment(self) -> None:
+        calls: list[str] = []
+
+        def detect(text: str, **_kwargs: object) -> list[dict[str, object]]:
+            calls.append(text)
+            return [{"label": "private_person", "start": 0, "end": 2, "score": 1.0}]
+
+        detector = OfflineSchiftDetector(Path("/bundled-model"))
+        detector._module = SimpleNamespace(detect=detect)
+        text = "김민수" * 5_000
+
+        findings = detector.detect(text, {"PERSON"})
+
+        self.assertEqual(calls, [text])
+        self.assertEqual([(item.type, item.start, item.end) for item in findings], [("PERSON", 0, 2)])
+
 
 if __name__ == "__main__":
     unittest.main()
