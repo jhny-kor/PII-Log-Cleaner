@@ -8,7 +8,7 @@ PII Log Cleaner의 자체 작성 소스 코드와 문서는 [Apache License 2.0]
 
 ## 화면 예시
 
-![Flaticon 아이콘을 적용한 PII Log Cleaner 화면](artifacts/ui-sample-flaticon-1536x1024.png)
+![PII Log Cleaner 화면](artifacts/ui-sample-flaticon-1536x1024.png)
 
 파일 선택, 탐지 항목, 실행 요약, 비식별화 미리보기를 포함한 데모 화면입니다.
 
@@ -54,6 +54,18 @@ PowerShell에서 실행합니다.
 ```
 
 완료되면 `dist\PII-Log-Cleaner-Setup.exe` 한 개가 만들어집니다. 내부적으로는 PyInstaller `onedir` 구조를 사용해 모델을 설치 폴더에 정상 배치한 뒤, Inno Setup이 이를 단일 설치파일로 만듭니다.
+
+빌드 스크립트는 더 이상 `Python 3.11`만 고정 호출하지 않고 `py -3`으로 현재 설치된 64비트 Python 3.10 이상을 선택합니다. 여러 런타임이 있거나 자동 탐지가 실패하면 다음처럼 사용할 Python 실행 파일을 직접 지정할 수 있습니다.
+
+```powershell
+.\build-windows.ps1 -PythonExe "C:\Python311\python.exe" -ModelPath C:\secure-build-assets\schift-ko-pii-v6
+```
+
+`py --list`에서 Python이 보이지 않으면 먼저 64비트 Python을 설치해야 합니다.
+
+## 브랜딩 자산
+
+사용자가 제공한 방패·문서·빗자루 이미지를 앱 창 아이콘, Windows 실행 파일·설치 마법사 아이콘으로 사용합니다. 워드마크 이미지는 제목 표시줄에 사용하며, 기능 버튼의 보조 아이콘은 기존 Flaticon 자산을 유지합니다.
 
 ## 로컬 검사
 

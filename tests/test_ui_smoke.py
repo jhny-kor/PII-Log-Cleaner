@@ -12,6 +12,13 @@ except ImportError:  # Core checks stay runnable without GUI dependencies.
     QApplication = None
 
 
+class BrandAssetTests(unittest.TestCase):
+    def test_provided_brand_assets_are_packaged(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        for name in ("pii-log-cleaner-icon.png", "pii-log-cleaner-wordmark.png", "pii-log-cleaner-icon.ico"):
+            self.assertTrue((root / "resources" / "icons" / "branding" / name).is_file(), name)
+
+
 @unittest.skipUnless(QApplication, "PySide6 is not installed")
 class WindowSmokeTests(unittest.TestCase):
     @classmethod

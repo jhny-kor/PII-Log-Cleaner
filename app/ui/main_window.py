@@ -57,18 +57,25 @@ class TitleBar(QFrame):
         icon.setObjectName("titleIcon")
         icon.setFixedSize(QSize(30, 30))
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        shield_asset = _asset_path("flaticon/shield.png")
-        if not shield_asset.is_file():
-            shield_asset = _asset_path("title-shield.png")
-        if shield_asset.is_file():
-            icon.setPixmap(QPixmap(str(shield_asset)).scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        icon_asset = _asset_path("branding/pii-log-cleaner-icon.png")
+        if icon_asset.is_file():
+            icon.setPixmap(QPixmap(str(icon_asset)).scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         else:
             shield = getattr(QStyle.StandardPixmap, "SP_VistaShield", QStyle.StandardPixmap.SP_DialogApplyButton)
             icon.setPixmap(self.style().standardIcon(shield).pixmap(28, 28))
         layout.addWidget(icon)
-        title = QLabel(TEXT["app_title"], self)
-        title.setObjectName("titleLabel")
-        layout.addWidget(title)
+        wordmark_asset = _asset_path("branding/pii-log-cleaner-wordmark.png")
+        if wordmark_asset.is_file():
+            wordmark = QLabel(self)
+            wordmark.setObjectName("brandLogo")
+            wordmark.setFixedSize(QSize(108, 44))
+            wordmark.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            wordmark.setPixmap(QPixmap(str(wordmark_asset)).scaled(104, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            layout.addWidget(wordmark)
+        else:
+            title = QLabel(TEXT["app_title"], self)
+            title.setObjectName("titleLabel")
+            layout.addWidget(title)
         version = QLabel(TEXT["version"], self)
         version.setObjectName("versionLabel")
         layout.addWidget(version)
@@ -127,6 +134,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.setWindowTitle(TEXT["app_title"])
+        self.setWindowIcon(_application_icon())
         self.setMinimumSize(1_300, 860)
         self.resize(1_536, 1_024)
         self._build_ui()
@@ -819,6 +827,7 @@ class MainWindow(QMainWindow):
             QMainWindow, QWidget { background: #f8fafc; color: #172033; font-family: 'Segoe UI', 'Malgun Gothic'; font-size: 13px; }
             QFrame#titleBar { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1765c9, stop:1 #0e4a9d); }
             QLabel#titleIcon { background: rgba(255, 255, 255, 0.96); border-radius: 8px; }
+            QLabel#brandLogo { background: rgba(255, 255, 255, 0.96); border-radius: 5px; padding: 1px; }
             QLabel#titleLabel { color: white; background: transparent; font-size: 20px; font-weight: 700; }
             QLabel#versionLabel { color: #dbeafe; background: transparent; font-size: 14px; }
             QToolButton#titleButton { border: 0; padding: 10px; background: transparent; }
@@ -850,6 +859,7 @@ class MainWindow(QMainWindow):
 def launch(model_dir: Path, allow_regex_only: bool = False, demo: bool = False) -> int:
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName(TEXT["app_title"])
+    app.setWindowIcon(_application_icon())
     window = MainWindow(model_dir, allow_regex_only, demo)
     window.show()
     return app.exec()
@@ -858,3 +868,8 @@ def launch(model_dir: Path, allow_regex_only: bool = False, demo: bool = False) 
 def _asset_path(name: str) -> Path:
     root = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[2]
     return root / "resources" / "icons" / name
+
+
+def _application_icon() -> QIcon:
+    asset = _asset_path("branding/pii-log-cleaner-icon.png")
+    return QIcon(str(asset)) if asset.is_file() else QIcon()

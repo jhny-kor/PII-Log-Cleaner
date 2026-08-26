@@ -20,3 +20,7 @@
 - [Power](https://www.flaticon.com/free-icon/power_13840095)
 - [Delete](https://www.flaticon.com/free-icon/delete_13840077)
 - [Vision](https://www.flaticon.com/free-icon/vision_13839952)
+
+## 제공 브랜딩 자산
+
+`resources/icons/branding/`의 앱 아이콘과 워드마크는 프로젝트 사용자가 제공한 이미지에서 생성했습니다. 이 자산의 배포 권한은 제공자에게 확인해야 합니다.

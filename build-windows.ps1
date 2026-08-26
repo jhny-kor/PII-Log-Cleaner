@@ -17,29 +17,50 @@ $InstallerScript = Join-Path $ProjectRoot "installer\PII-Log-Cleaner.iss"
 $ProjectLicense = Join-Path $ProjectRoot "LICENSE"
 $ProjectNotice = Join-Path $ProjectRoot "NOTICE"
 $ThirdPartyNotices = Join-Path $ProjectRoot "THIRD_PARTY_NOTICES.md"
+$AppIcon = Join-Path $ProjectRoot "resources\icons\branding\pii-log-cleaner-icon.ico"
+
+function Test-PythonRuntime {
+    param(
+        [string]$Command,
+        [string[]]$Prefix = @()
+    )
+    & $Command @Prefix -c "import platform, sys; assert sys.version_info >= (3, 10) and platform.architecture()[0] == '64bit'" 1>$null 2>$null
+    return $LASTEXITCODE -eq 0
+}
 
 function Resolve-Python {
     if ($PythonExe) {
-        return $PythonExe
+        $candidate = if (Test-Path $PythonExe -PathType Leaf) {
+            (Resolve-Path $PythonExe).Path
+        } else {
+            $command = Get-Command $PythonExe -CommandType Application -ErrorAction SilentlyContinue
+            if ($command) { $command.Source }
+        }
+        if (-not $candidate) {
+            throw "지정한 Python 실행 파일을 찾지 못했습니다: $PythonExe"
+        }
+        $script:PythonArguments = @()
+        if (-not (Test-PythonRuntime -Command $candidate)) {
+            throw "지정한 Python은 64-bit Python 3.10 이상이 아닙니다: $candidate"
+        }
+        return $candidate
     }
     $launcher = Get-Command py.exe -ErrorAction SilentlyContinue
-    if ($launcher) {
-        return "py.exe"
+    if ($launcher -and (Test-PythonRuntime -Command $launcher.Source -Prefix @("-3"))) {
+        $script:PythonArguments = @("-3")
+        return $launcher.Source
     }
     $python = Get-Command python.exe -ErrorAction SilentlyContinue
-    if ($python) {
+    if ($python -and (Test-PythonRuntime -Command $python.Source)) {
+        $script:PythonArguments = @()
         return $python.Source
     }
-    throw "Python 3.10 이상(64-bit)을 찾지 못했습니다. -PythonExe로 지정해주세요."
+    throw "64-bit Python 3.10 이상을 찾지 못했습니다. 'py --list'로 설치 런타임을 확인하거나 -PythonExe로 python.exe 경로를 지정해주세요."
 }
 
 function Invoke-Python {
     param([string[]]$Arguments)
-    if ($script:PythonCommand -eq "py.exe") {
-        & $script:PythonCommand "-3.11" @Arguments
-    } else {
-        & $script:PythonCommand @Arguments
-    }
+    & $script:PythonCommand @script:PythonArguments @Arguments
     if ($LASTEXITCODE -ne 0) { throw "Python 명령이 실패했습니다: $Arguments" }
 }
 
@@ -72,19 +93,15 @@ function Assert-ModelSnapshot {
 }
 
 if ($env:OS -ne "Windows_NT") { throw "이 스크립트는 Windows에서만 실행할 수 있습니다." }
+$script:PythonArguments = @()
 $script:PythonCommand = Resolve-Python
-if ($script:PythonCommand -eq "py.exe") {
-    & $script:PythonCommand -3.11 -c "import platform, sys; assert sys.version_info >= (3, 10) and platform.architecture()[0] == '64bit'"
-} else {
-    & $script:PythonCommand -c "import platform, sys; assert sys.version_info >= (3, 10) and platform.architecture()[0] == '64bit'"
-}
-if ($LASTEXITCODE -ne 0) { throw "64-bit Python 3.10 이상이 필요합니다." }
 
 Assert-ModelSnapshot (Resolve-Path $ModelPath)
 $missingLegalFiles = @($ProjectLicense, $ProjectNotice, $ThirdPartyNotices) | Where-Object { -not (Test-Path $_ -PathType Leaf) }
 if ($missingLegalFiles) {
     throw "배포 고지 파일이 없습니다: $($missingLegalFiles -join ', ')"
 }
+if (-not (Test-Path $AppIcon -PathType Leaf)) { throw "앱 아이콘 파일을 찾지 못했습니다: $AppIcon" }
 New-Item -ItemType Directory -Force -Path $BuildRoot, $PyInstallerWork, $PyInstallerDist | Out-Null
 
 if (-not (Test-Path (Join-Path $VenvRoot "Scripts\python.exe"))) {
@@ -106,6 +123,7 @@ $ModelSnapshot = (Resolve-Path $ModelPath).Path
 & $VenvPython -m PyInstaller `
     --noconfirm --clean --windowed `
     --name "PII Log Cleaner" `
+    --icon $AppIcon `
     --paths $ProjectRoot `
     --workpath $PyInstallerWork `
     --distpath $PyInstallerDist `
