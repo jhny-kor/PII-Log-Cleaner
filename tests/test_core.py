@@ -40,6 +40,12 @@ class CoreRegressionTests(unittest.TestCase):
         self.assertNotIn("1.2.3.4", values)
         self.assertNotIn("9001011234567", values)
 
+    def test_regex_detects_contextual_and_placeholder_names(self) -> None:
+        findings = RegexDetector().detect(
+            "성명=김민수 user=김ㅇㅇ 이메일=abc@example.com", {"PERSON"}
+        )
+        self.assertEqual([item.value for item in findings], ["김민수", "김ㅇㅇ"])
+
     def test_masker_uses_offsets_and_reuses_tokens(self) -> None:
         text = "010-1234-5678 / 010-1234-5678"
         detections = [

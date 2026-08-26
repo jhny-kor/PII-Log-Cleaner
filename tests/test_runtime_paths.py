@@ -46,7 +46,7 @@ class RuntimePathTests(unittest.TestCase):
 
         def detect(text: str, **_kwargs: object) -> list[dict[str, object]]:
             calls.append(text)
-            return [{"label": "private_person", "start": 0, "end": 2, "score": 1.0}]
+            return [{"label": "private_person", "start": 0, "end": 3, "score": 1.0}]
 
         detector = OfflineSchiftDetector(Path("/bundled-model"))
         detector._module = SimpleNamespace(detect=detect)
@@ -55,7 +55,25 @@ class RuntimePathTests(unittest.TestCase):
         findings = detector.detect(text, {"PERSON"})
 
         self.assertEqual(calls, [text])
-        self.assertEqual([(item.type, item.start, item.end) for item in findings], [("PERSON", 0, 2)])
+        self.assertEqual([(item.type, item.start, item.end) for item in findings], [("PERSON", 0, 3)])
+
+    def test_model_detector_filters_non_name_person_spans(self) -> None:
+        text = "123 이메일 김민수 김ㅇㅇ"
+
+        def detect(_text: str, **_kwargs: object) -> list[dict[str, object]]:
+            return [
+                {"label": "private_person", "start": 0, "end": 3, "score": 0.99},
+                {"label": "private_person", "start": 4, "end": 7, "score": 0.99},
+                {"label": "private_person", "start": 8, "end": 11, "score": 0.99},
+                {"label": "private_person", "start": 12, "end": 15, "score": 0.99},
+            ]
+
+        detector = OfflineSchiftDetector(Path("/bundled-model"))
+        detector._module = SimpleNamespace(detect=detect)
+
+        findings = detector.detect(text, {"PERSON"})
+
+        self.assertEqual([item.value for item in findings], ["김민수", "김ㅇㅇ"])
 
 
 if __name__ == "__main__":

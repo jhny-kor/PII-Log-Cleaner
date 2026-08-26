@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import re
 import threading
 from pathlib import Path
 
@@ -32,6 +33,20 @@ class OfflineSchiftDetector:
         "private_organization": "IDENTIFIER",
         "organization": "IDENTIFIER",
     }
+    _PERSON_SURNAMES = frozenset("김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구민진지엄채원천방공현함변염여추도석선설마길연위표명기")
+    _PERSON_STOPWORDS = frozenset(
+        {
+            "이메일",
+            "이벤트",
+            "주소값",
+            "주민등록",
+            "김밥",
+            "김치",
+            "박물관",
+            "최대값",
+            "정상값",
+        }
+    )
 
     def __init__(self, model_dir: Path) -> None:
         self.model_dir = model_dir
@@ -84,10 +99,13 @@ class OfflineSchiftDetector:
             start, end = int(item["start"]), int(item["end"])
             if start < 0 or end <= start or end > len(text):
                 continue
+            value = text[start:end]
+            if label == "PERSON" and not self._is_person_candidate(value):
+                continue
             findings.append(
                 Detection(
                     label,
-                    text[start:end],
+                    value,
                     start,
                     end,
                     float(item.get("score", 0.0)),
@@ -95,6 +113,16 @@ class OfflineSchiftDetector:
                 )
             )
         return resolve_overlaps(findings)
+
+    @classmethod
+    def _is_person_candidate(cls, value: str) -> bool:
+        value = value.strip()
+        return (
+            3 <= len(value) <= 4
+            and re.fullmatch(r"[가-힣ㅇ]+", value) is not None
+            and value[0] in cls._PERSON_SURNAMES
+            and value not in cls._PERSON_STOPWORDS
+        )
 
     def _local_model_file(self, _repo_id: str, filename: str, **_kwargs: object) -> str:
         candidate = self.model_dir / filename

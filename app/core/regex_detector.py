@@ -9,6 +9,14 @@ from .models import Detection
 class RegexDetector:
     """Offline detector for structured values; no detected values are logged."""
 
+    _KOREAN_SURNAMES = "김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구민진지엄채원천방공현함변염여추도석선설마길연위표명기"
+    _PERSON_CONTEXT = re.compile(
+        r"(?<![\w가-힣])(?:성명|이름|name|username|user|고객명|담당자)\s*[:=]\s*[\"']?(?P<value>[가-힣ㅇ]{2,4})(?![가-힣ㅇ])",
+        re.IGNORECASE,
+    )
+    _PERSON_PLACEHOLDER = re.compile(
+        rf"(?<![가-힣])(?P<value>[{_KOREAN_SURNAMES}]ㅇ{{2,3}})(?![가-힣ㅇ])"
+    )
     _RRN = re.compile(r"(?<!\d)(?P<value>\d{6}-?\d{7})(?!\d)")
     _PHONE = re.compile(
         r"(?<!\d)(?P<value>(?:01[016789][-\s]?\d{3,4}[-\s]?\d{4}|0(?:2|[3-6][1-5]|70)[-\s]?\d{3,4}[-\s]?\d{4}))(?!\d)"
@@ -34,6 +42,8 @@ class RegexDetector:
 
     def detect(self, text: str, enabled: set[str]) -> list[Detection]:
         findings: list[Detection] = []
+        if "PERSON" in enabled:
+            findings.extend(self._persons(text))
         if "RRN" in enabled:
             findings.extend(self._rrns(text))
         if "PHONE" in enabled:
@@ -51,6 +61,17 @@ class RegexDetector:
         if "ACCOUNT" in enabled:
             findings.extend(self._accounts(text))
         return findings
+
+    @classmethod
+    def _persons(cls, text: str) -> list[Detection]:
+        findings: dict[tuple[int, int], Detection] = {}
+        for pattern in (cls._PERSON_CONTEXT, cls._PERSON_PLACEHOLDER):
+            for match in pattern.finditer(text):
+                start, end = match.start("value"), match.end("value")
+                findings[(start, end)] = Detection(
+                    "PERSON", match.group("value"), start, end, 0.99, "regex"
+                )
+        return sorted(findings.values(), key=lambda item: (item.start, item.end))
 
     @staticmethod
     def _has_context(pattern: re.Pattern[str], text: str, start: int) -> bool:
