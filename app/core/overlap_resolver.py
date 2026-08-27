@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from bisect import bisect_left
+
 from .models import Detection
 
 
@@ -18,7 +20,13 @@ def resolve_overlaps(detections: list[Detection]) -> list[Detection]:
         )
     )
     accepted: list[Detection] = []
+    accepted_starts: list[int] = []
     for candidate in candidates:
-        if all(candidate.end <= current.start or candidate.start >= current.end for current in accepted):
-            accepted.append(candidate)
-    return sorted(accepted, key=lambda item: (item.start, item.end))
+        index = bisect_left(accepted_starts, candidate.start)
+        if index and accepted[index - 1].end > candidate.start:
+            continue
+        if index < len(accepted) and accepted[index].start < candidate.end:
+            continue
+        accepted.insert(index, candidate)
+        accepted_starts.insert(index, candidate.start)
+    return accepted

@@ -1,5 +1,5 @@
 #define MyAppName "PII Log Cleaner"
-#define MyAppVersion "1.0.4"
+#define MyAppVersion "1.0.5"
 #define MyAppExeName "PII.exe"
 
 [Setup]

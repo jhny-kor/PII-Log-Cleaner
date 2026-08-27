@@ -3,15 +3,53 @@ from __future__ import annotations
 import tempfile
 import threading
 import unittest
+from random import Random
 from pathlib import Path
 
 from app.core.masker import Masker, MaskingMode
 from app.core.models import Detection
+from app.core.overlap_resolver import resolve_overlaps
 from app.core.regex_detector import RegexDetector
 from app.processing.file_processor import FileProcessor
 
 
 class CoreRegressionTests(unittest.TestCase):
+    def test_overlap_resolution_matches_previous_selection_rules(self) -> None:
+        random = Random(20260827)
+        detections = [
+            Detection(
+                "TEST",
+                str(index),
+                start := random.randrange(-2, 500),
+                start + random.randrange(-1, 30),
+                random.random(),
+                random.choice(("regex", "model", "llm", "other")),
+            )
+            for index in range(500)
+        ]
+
+        candidates = [item for item in detections if item.start >= 0 and item.end > item.start]
+        candidates.sort(
+            key=lambda item: (
+                {"regex": 0, "model": 1, "llm": 2}.get(item.source, 9),
+                item.start,
+                -(item.end - item.start),
+                -item.confidence,
+            )
+        )
+        expected: list[Detection] = []
+        for candidate in candidates:
+            if all(
+                candidate.end <= current.start or candidate.start >= current.end
+                for current in expected
+            ):
+                expected.append(candidate)
+
+        self.assertEqual(
+            resolve_overlaps(detections),
+            sorted(expected, key=lambda item: (item.start, item.end)),
+        )
+
     def test_analysis_skips_full_masking_after_preview_limit(self) -> None:
         class NoMaskingNeeded:
             def apply(self, *_args: object, **_kwargs: object) -> tuple[str, int]:
