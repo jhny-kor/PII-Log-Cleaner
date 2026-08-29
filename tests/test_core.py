@@ -50,19 +50,6 @@ class CoreRegressionTests(unittest.TestCase):
             sorted(expected, key=lambda item: (item.start, item.end)),
         )
 
-    def test_analysis_skips_full_masking_after_preview_limit(self) -> None:
-        class NoMaskingNeeded:
-            def apply(self, *_args: object, **_kwargs: object) -> tuple[str, int]:
-                raise AssertionError("미리보기 제한 이후에는 마스킹을 계산하면 안 됩니다.")
-
-        with tempfile.TemporaryDirectory() as directory:
-            source = Path(directory) / "access.log"
-            source.write_text("phone=010-1234-5678\n", encoding="utf-8")
-            result = FileProcessor(
-                RegexDetector(), {"PHONE"}, NoMaskingNeeded(), threading.Event()
-            ).analyze_file(source, MaskingMode.AUTO, "", preview_limit=0)
-            self.assertEqual(result.replacements, 1)
-
     def test_regex_detection_skips_explicit_version_and_order_number(self) -> None:
         text = (
             "rrn=900101-1234567 phone=010-1234-5678 email=abc@example.com "
@@ -99,15 +86,24 @@ class CoreRegressionTests(unittest.TestCase):
         self.assertEqual(partial, "010-****-5678")
 
     def test_streaming_deidentification_keeps_source_and_writes_backup(self) -> None:
+        class CountingDetector:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def detect(self, text: str, enabled: set[str]) -> list[Detection]:
+                self.calls += 1
+                return RegexDetector().detect(text, enabled)
+
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "access.log"
             original = "INFO user=김민수 phone=010-1234-5678\r\nversion=1.2.3.4\r\n"
             with source.open("w", encoding="utf-8", newline="") as handle:
                 handle.write(original)
+            detector = CountingDetector()
             processor = FileProcessor(
-                RegexDetector(), {"PHONE", "IP", "RRN", "EMAIL", "API_KEY", "PASSWORD", "ACCOUNT"}, Masker(), threading.Event()
+                detector, {"PHONE", "IP", "RRN", "EMAIL", "API_KEY", "PASSWORD", "ACCOUNT"}, Masker(), threading.Event()
             )
-            result = processor.deidentify_file(source, MaskingMode.AUTO, "", backup=True)
+            result = processor.deidentify_file(source, MaskingMode.AUTO, "", backup=True, preview_limit=100)
             output = source.with_name("access_deid.log")
             with source.open("r", encoding="utf-8", newline="") as handle:
                 self.assertEqual(handle.read(), original)
@@ -118,6 +114,8 @@ class CoreRegressionTests(unittest.TestCase):
             self.assertIn("[PHONE_1]", deidentified)
             self.assertIn("version=1.2.3.4", deidentified)
             self.assertEqual(result.counts["PHONE"], 1)
+            self.assertEqual(detector.calls, 1)
+            self.assertTrue(any("[PHONE_1]" in row.deidentified for row in result.previews))
 
 
 if __name__ == "__main__":

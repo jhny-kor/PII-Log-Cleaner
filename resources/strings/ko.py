@@ -1,6 +1,6 @@
 TEXT = {
     "app_title": "PII Log Cleaner",
-    "version": "v1.0.5",
+    "version": "v1.0.6",
     "select_target": "1. 대상 선택",
     "select_folder": "폴더 선택",
     "select_files": "파일 선택",
@@ -36,8 +36,7 @@ TEXT = {
     "encoding_detail": "UTF-8, EUC-KR, CP949 등 자동 감지",
     "recursive": "하위 폴더 포함",
     "recursive_detail": "선택한 폴더의 하위 폴더까지 처리",
-    "start_analysis": "분석 시작",
-    "run_deid": "비식별화 실행",
+    "start_analysis": "분석 및 비식별화 실행",
     "stop": "중지",
     "summary": "실행 요약",
     "summary_item": "항목",
@@ -63,7 +62,6 @@ TEXT = {
     "ready": "준비 완료",
     "preparing": "준비 중…",
     "no_files": "처리할 파일을 선택해주세요.",
-    "no_analysis": "먼저 분석을 완료해주세요.",
     "custom_required": "치환할 문자열을 입력해주세요.",
     "model_error": "개인정보 탐지 엔진을 초기화하지 못했습니다.\n프로그램을 다시 설치해주세요.",
     "encoding_error": "인코딩을 자동으로 확인하지 못했습니다.",
@@ -74,6 +72,5 @@ TEXT = {
     "duplicates_skipped": "이미 추가된 파일 {count}개를 제외했습니다.",
     "files_added": "파일 {count}개를 추가했습니다.",
     "processing": "처리 중: {current}/{total}",
-    "analysis_complete": "분석이 완료되었습니다.",
-    "deid_complete": "비식별화 파일을 생성했습니다.",
+    "analysis_complete": "분석을 완료하고 비식별화 파일을 생성했습니다.",
 }

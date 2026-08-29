@@ -30,21 +30,14 @@ class FileProcessor:
         self.masker = masker
         self.stop_event = stop_event
 
-    def analyze_file(self, path: Path, mode: str, custom_text: str, preview_limit: int) -> FileAnalysis:
-        analysis = FileAnalysis(path=str(path))
-        encoding = detect_encoding(path)
-        with path.open("r", encoding=encoding, newline="") as source:
-            for original, detections in self._segments(source):
-                self._check_stopped()
-                findings = resolve_overlaps(detections)
-                analysis.replacements += len(findings)
-                self._add_counts(analysis, findings)
-                if len(analysis.previews) < preview_limit:
-                    deidentified, _ = self.masker.apply(original, findings, mode, custom_text)
-                    self._add_preview_rows(analysis, original, deidentified, findings, preview_limit)
-        return analysis
-
-    def deidentify_file(self, path: Path, mode: str, custom_text: str, backup: bool) -> FileAnalysis:
+    def deidentify_file(
+        self,
+        path: Path,
+        mode: str,
+        custom_text: str,
+        backup: bool,
+        preview_limit: int = 0,
+    ) -> FileAnalysis:
         analysis = FileAnalysis(path=str(path))
         encoding = detect_encoding(path)
         output = self.output_path(path)
@@ -64,6 +57,7 @@ class FileProcessor:
                     target.write(deidentified)
                     analysis.replacements += replacements
                     self._add_counts(analysis, findings)
+                    self._add_preview_rows(analysis, original, deidentified, findings, preview_limit)
             os.replace(temporary, output)
         except Exception:
             temporary.unlink(missing_ok=True)

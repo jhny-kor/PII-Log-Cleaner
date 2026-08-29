@@ -28,7 +28,7 @@ class WindowSmokeTests(unittest.TestCase):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         cls.app = QApplication.instance() or QApplication([])
 
-    def test_regex_only_workflow_analyzes_then_writes_separate_output(self) -> None:
+    def test_regex_only_workflow_analyzes_and_writes_output_in_one_run(self) -> None:
         from app.ui.main_window import MainWindow
 
         with tempfile.TemporaryDirectory() as directory:
@@ -43,13 +43,12 @@ class WindowSmokeTests(unittest.TestCase):
                 self._wait_until(lambda: window.detector is not None)
                 window.add_paths([source])
                 window.start_analysis()
-                self._wait_until(lambda: window.analysis_result is not None and window.active_action is None)
+                output = source.with_name("access_deid.log")
+                self._wait_until(
+                    lambda: window.analysis_result is not None and output.exists() and window.worker is None
+                )
                 self.assertEqual(window.analysis_result.detection_count, 2)
                 self.assertEqual(len(window.current_previews), 1)
-
-                window.start_deidentification()
-                output = source.with_name("access_deid.log")
-                self._wait_until(lambda: output.exists() and window.active_action is None)
                 self.assertIn("[PHONE_1]", output.read_text(encoding="utf-8"))
                 self.assertEqual(source.read_text(encoding="utf-8"), "INFO phone=010-1234-5678 email=abc@example.com\n")
             finally:

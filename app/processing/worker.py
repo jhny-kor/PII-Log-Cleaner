@@ -48,7 +48,6 @@ class ProcessingWorker(QObject):
         enabled: set[str],
         mode: str,
         custom_text: str,
-        action: str,
         backup: bool,
         report: bool,
         preview_limit: int = 100,
@@ -59,7 +58,6 @@ class ProcessingWorker(QObject):
         self.enabled = enabled
         self.mode = mode
         self.custom_text = custom_text
-        self.action = action
         self.backup = backup
         self.report = report
         self.preview_limit = preview_limit
@@ -75,15 +73,20 @@ class ProcessingWorker(QObject):
             return
         processor = FileProcessor(self.detector, self.enabled, Masker(), self.stop_event)
         result = RunResult("complete")
-        app_logger.info("%s 시작: 파일 %d개", "분석" if self.action == "analysis" else "비식별화", len(self.paths))
+        app_logger.info("분석 및 비식별화 시작: 파일 %d개", len(self.paths))
         try:
             for index, path in enumerate(self.paths, start=1):
                 self.progress.emit(index, len(self.paths))
-                if self.action == "analysis":
-                    result.files.append(processor.analyze_file(path, self.mode, self.custom_text, self.preview_limit))
-                else:
-                    result.files.append(processor.deidentify_file(path, self.mode, self.custom_text, self.backup))
-            if self.action == "deidentify" and self.report and result.files:
+                result.files.append(
+                    processor.deidentify_file(
+                        path,
+                        self.mode,
+                        self.custom_text,
+                        self.backup,
+                        self.preview_limit,
+                    )
+                )
+            if self.report and result.files:
                 result.report_path = str(write_csv_report(result.files, self.paths[0].parent))
         except ProcessingStopped:
             result.status = "cancelled"

@@ -180,7 +180,6 @@ class MainWindow(QMainWindow):
         self.engine_worker: EngineInitWorker | None = None
         self.worker_thread: QThread | None = None
         self.worker: ProcessingWorker | None = None
-        self.active_action: str | None = None
         self.started_at: datetime | None = None
         self.started_tick: float | None = None
         self._updating_files = False
@@ -297,20 +296,15 @@ class MainWindow(QMainWindow):
         panel = QWidget(self)
         layout = QVBoxLayout(panel)
         actions = QHBoxLayout()
-        self.analysis_button = self._button(TEXT["start_analysis"], "scanner", QStyle.StandardPixmap.SP_MediaPlay, "primaryButton")
+        self.analysis_button = self._button(TEXT["start_analysis"], "shield", QStyle.StandardPixmap.SP_MediaPlay, "primaryButton")
         self.analysis_button.setMinimumHeight(50)
         self.analysis_button.setEnabled(False)
         self.analysis_button.clicked.connect(self.start_analysis)
-        self.deidentify_button = self._button(TEXT["run_deid"], "shield", QStyle.StandardPixmap.SP_DialogApplyButton, "secondaryButton")
-        self.deidentify_button.setMinimumHeight(50)
-        self.deidentify_button.setEnabled(False)
-        self.deidentify_button.clicked.connect(self.start_deidentification)
         self.stop_button = self._button(TEXT["stop"], "power", QStyle.StandardPixmap.SP_MediaStop)
         self.stop_button.setMinimumHeight(50)
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.request_stop)
         actions.addWidget(self.analysis_button, 1)
-        actions.addWidget(self.deidentify_button, 1)
         actions.addWidget(self.stop_button, 0)
         layout.addLayout(actions)
 
@@ -613,17 +607,10 @@ class MainWindow(QMainWindow):
         if self._masking_mode() == MaskingMode.CUSTOM and not self.custom_input.text().strip():
             self.status.showMessage(TEXT["custom_required"])
             return
-        self._start_processing("analysis")
+        self._start_processing()
 
-    def start_deidentification(self) -> None:
-        if self.analysis_result is None:
-            self.status.showMessage(TEXT["no_analysis"])
-            return
-        self._start_processing("deidentify")
-
-    def _start_processing(self, action: str) -> None:
+    def _start_processing(self) -> None:
         paths = self._selected_paths()
-        self.active_action = action
         self.started_at = datetime.now()
         self.started_tick = perf_counter()
         self._set_busy(True)
@@ -634,7 +621,6 @@ class MainWindow(QMainWindow):
             self._selected_codes(),
             self._masking_mode(),
             self.custom_input.text(),
-            action,
             self.backup_box.isChecked(),
             self.report_box.isChecked(),
         )
@@ -673,20 +659,16 @@ class MainWindow(QMainWindow):
             result.replacement_count,
         )
         if result.status == "complete":
-            if self.active_action == "analysis":
-                self.analysis_result = result
-                self.current_previews = list(itertools.islice((row for file in result.files for row in file.previews), 100))
-                self._populate_preview(self.current_previews)
-                self.status.showMessage(TEXT["analysis_complete"])
-            else:
-                self.status.showMessage(TEXT["deid_complete"])
+            self.analysis_result = result
+            self.current_previews = list(itertools.islice((row for file in result.files for row in file.previews), 100))
+            self._populate_preview(self.current_previews)
+            self.status.showMessage(TEXT["analysis_complete"])
             self._save_history(TEXT["complete"], result, elapsed)
         elif result.status == "cancelled":
             self.status.showMessage(TEXT["cancelled"])
             self._save_history(TEXT["cancelled"], result, elapsed)
         else:
             self.status.showMessage(result.error or "처리 중 오류가 발생했습니다.")
-        self.active_action = None
         self.worker = None
         self.worker_thread = None
         self._set_busy(False)
@@ -694,11 +676,9 @@ class MainWindow(QMainWindow):
     def _set_busy(self, busy: bool) -> None:
         if busy:
             self.analysis_button.setEnabled(False)
-            self.deidentify_button.setEnabled(False)
             self.stop_button.setEnabled(True)
             return
         self.analysis_button.setEnabled(self.detector is not None)
-        self.deidentify_button.setEnabled(self.detector is not None and self.analysis_result is not None)
         self.stop_button.setEnabled(False)
 
     def _set_summary(self, values: dict[str, str], detections: int | None, replacements: int | None) -> None:
