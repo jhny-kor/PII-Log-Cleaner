@@ -96,7 +96,7 @@ class CoreRegressionTests(unittest.TestCase):
     def test_regex_detection_skips_explicit_version_and_order_number(self) -> None:
         text = (
             "rrn=900101-1234567 phone=010-1234-5678 email=abc@example.com "
-            "ip=192.168.0.1 api_key=sk-1234567890 password=test1234 "
+            "ip=192.168.0.1 api_key=sk-1234567890 password=test1234 "  # gitleaks:allow
             "account=123-456-789012 version=1.2.3.4 order_no=9001011234567"
         )
         findings = RegexDetector().detect(

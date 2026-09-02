@@ -163,7 +163,7 @@ $VenvPython = Join-Path $VenvRoot "Scripts\python.exe"
 if ($LASTEXITCODE -ne 0) { throw "pip 업그레이드에 실패했습니다." }
 
 # The released installer is CPU-only; no GPU runtime is pulled into the bundle.
-& $VenvPython -m pip install --index-url https://download.pytorch.org/whl/cpu torch
+& $VenvPython -m pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.10.0"
 if ($LASTEXITCODE -ne 0) { throw "CPU 전용 PyTorch 설치에 실패했습니다." }
 & $VenvPython -m pip install -r $Requirements
 if ($LASTEXITCODE -ne 0) { throw "패키지 설치에 실패했습니다." }

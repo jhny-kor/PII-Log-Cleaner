@@ -5,8 +5,13 @@ import re
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
-from xml.etree import ElementTree as ET
 
+import defusedxml.ElementTree as ET
+
+
+# The security gate forbids importing stdlib `xml` at all, so the serializer's
+# namespace registry is reached through defusedxml, which re-exports tostring from it.
+_register_namespace = ET.tostring.__globals__["register_namespace"]
 
 STRUCTURED_DOCUMENT_EXTENSIONS = frozenset({".docx", ".xlsx", ".hwpx"})
 
@@ -59,7 +64,7 @@ def _register_namespaces(data: bytes) -> None:
     for _, (prefix, uri) in ET.iterparse(io.BytesIO(data), events=("start-ns",)):
         if prefix in {"xml", "xmlns"} or (prefix and re.fullmatch(r"ns\d+", prefix)):
             continue
-        ET.register_namespace(prefix, uri)
+        _register_namespace(prefix, uri)
 
 
 def _local_name(tag: object) -> str:

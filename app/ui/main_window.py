@@ -808,7 +808,7 @@ class MainWindow(QMainWindow):
                 [Detection("RRN", "", 0, 0, 1.0, "regex"), Detection("ACCOUNT", "", 0, 0, 1.0, "regex")],
             ),
             PreviewRow("POST /login HTTP/1.1 User-Agent: Mozilla/5.0", "POST /login HTTP/1.1 User-Agent: Mozilla/5.0", []),
-            PreviewRow("api_key=sk-1234567890abcdef", "api_key=[API_KEY_1]", [Detection("API_KEY", "", 0, 0, 1.0, "regex")]),
+            PreviewRow("api_key=sk-1234567890abcdef", "api_key=[API_KEY_1]", [Detection("API_KEY", "", 0, 0, 1.0, "regex")]),  # gitleaks:allow
         ]
         self._populate_preview(self.current_previews)
         self._populate_history_rows(
