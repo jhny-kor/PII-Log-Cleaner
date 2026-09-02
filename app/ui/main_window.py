@@ -7,7 +7,7 @@ from pathlib import Path
 from time import perf_counter
 
 from PySide6.QtCore import QSize, QThread, Qt, Signal
-from PySide6.QtGui import QCloseEvent, QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QCloseEvent, QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -104,18 +104,6 @@ class TitleBar(QFrame):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(20, 0, 12, 0)
         layout.setSpacing(8)
-        icon = QLabel(self)
-        icon.setObjectName("titleIcon")
-        icon.setFixedSize(QSize(30, 30))
-        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_asset = _asset_path("branding/pii-log-cleaner-icon.png")
-        icon_pixmap = QPixmap(str(icon_asset)) if icon_asset.is_file() else QPixmap()
-        if icon_pixmap.isNull():
-            shield = getattr(QStyle.StandardPixmap, "SP_VistaShield", QStyle.StandardPixmap.SP_DialogApplyButton)
-            icon.setPixmap(self.style().standardIcon(shield).pixmap(28, 28))
-        else:
-            icon.setPixmap(icon_pixmap.scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        layout.addWidget(icon)
         wordmark_asset = _asset_path("branding/pii-log-cleaner-wordmark.png")
         wordmark_pixmap = QPixmap(str(wordmark_asset)) if wordmark_asset.is_file() else QPixmap()
         if not wordmark_pixmap.isNull():
@@ -133,14 +121,15 @@ class TitleBar(QFrame):
         version.setObjectName("versionLabel")
         layout.addWidget(version)
         layout.addStretch()
-        for pixmap, action in (
-            (QStyle.StandardPixmap.SP_TitleBarMinButton, window.showMinimized),
-            (QStyle.StandardPixmap.SP_TitleBarMaxButton, window.toggle_maximized),
-            (QStyle.StandardPixmap.SP_TitleBarCloseButton, window.close),
+        for glyph, role, action in (
+            ("─", "min", window.showMinimized),
+            ("☐", "max", window.toggle_maximized),
+            ("✕", "close", window.close),
         ):
             button = QToolButton(self)
             button.setObjectName("titleButton")
-            button.setIcon(self.style().standardIcon(pixmap))
+            button.setProperty("role", role)
+            button.setText(glyph)
             button.clicked.connect(action)
             layout.addWidget(button)
 
@@ -210,7 +199,7 @@ class MainWindow(QMainWindow):
         body = QWidget(outer)
         body_layout = QVBoxLayout(body)
         body_layout.setContentsMargins(18, 16, 18, 12)
-        body_layout.setSpacing(0)
+        body_layout.setSpacing(14)
 
         top = QGridLayout()
         top.setHorizontalSpacing(20)
@@ -218,7 +207,7 @@ class MainWindow(QMainWindow):
         top.addWidget(self._summary_panel(), 0, 1)
         top.setColumnStretch(0, 58)
         top.setColumnStretch(1, 42)
-        body_layout.addLayout(top, 4)
+        body_layout.addLayout(top, 38)
 
         middle = QGridLayout()
         middle.setHorizontalSpacing(20)
@@ -230,8 +219,8 @@ class MainWindow(QMainWindow):
         middle.setColumnMinimumWidth(1, 315)
         middle.setColumnMinimumWidth(2, 310)
         middle.setColumnMinimumWidth(3, 415)
-        body_layout.addLayout(middle, 5)
-        body_layout.addWidget(self._preview_group(), 2)
+        body_layout.addLayout(middle, 36)
+        body_layout.addWidget(self._preview_group(), 32)
 
         root.addWidget(body, 1)
         self.setCentralWidget(outer)
@@ -437,25 +426,17 @@ class MainWindow(QMainWindow):
 
     def _button(self, text: str, icon_name: str, fallback: QStyle.StandardPixmap, object_name: str = "") -> QPushButton:
         button = QPushButton(text, self)
-        color = "#ffffff" if object_name == "primaryButton" else "#1768d4"
-        button.setIcon(self._icon(icon_name, fallback, color))
+        button.setIcon(self._icon(icon_name, fallback))
         button.setIconSize(QSize(18, 18))
         if object_name:
             button.setObjectName(object_name)
         return button
 
-    def _icon(self, icon_name: str, fallback: QStyle.StandardPixmap, color: str = "#1768d4") -> QIcon:
+    def _icon(self, icon_name: str, fallback: QStyle.StandardPixmap) -> QIcon:
         asset = _asset_path(f"flaticon/{icon_name}.png")
         if not asset.is_file():
             return self.style().standardIcon(fallback)
-        pixmap = QPixmap(str(asset))
-        if pixmap.isNull():
-            return self.style().standardIcon(fallback)
-        painter = QPainter(pixmap)
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-        painter.fillRect(pixmap.rect(), QColor(color))
-        painter.end()
-        icon = QIcon(pixmap)
+        icon = QIcon(str(asset))
         return icon if not icon.isNull() else self.style().standardIcon(fallback)
 
     @staticmethod
@@ -863,35 +844,49 @@ class MainWindow(QMainWindow):
     @staticmethod
     def _stylesheet() -> str:
         return """
-            QMainWindow, QWidget { background: #f8fafc; color: #172033; font-family: 'Segoe UI', 'Malgun Gothic'; font-size: 13px; }
-            QFrame#titleBar { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1765c9, stop:1 #0e4a9d); }
-            QLabel#titleIcon { background: rgba(255, 255, 255, 0.96); border-radius: 8px; }
-            QLabel#brandLogo { background: rgba(255, 255, 255, 0.96); border-radius: 5px; padding: 1px; }
+            QMainWindow { background: #eef2f7; }
+            QWidget { color: #16202e; font-family: 'Segoe UI', 'Malgun Gothic'; font-size: 13px; }
+            QFrame#titleBar { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #14509f, stop:1 #0b3573); }
+            QLabel#brandLogo { background: rgba(255, 255, 255, 0.97); border-radius: 8px; padding: 3px; }
             QLabel#titleLabel { color: white; background: transparent; font-size: 20px; font-weight: 700; }
-            QLabel#versionLabel { color: #dbeafe; background: transparent; font-size: 14px; }
-            QToolButton#titleButton { border: 0; padding: 10px; background: transparent; }
-            QToolButton#titleButton:hover { background: #093775; }
-            QGroupBox { background: white; border: 1px solid #d7e1ef; border-radius: 6px; margin-top: 13px; padding: 10px 0; font-weight: 700; }
-            QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; }
-            QPushButton { min-height: 30px; border: 1px solid #b9cce7; background: #ffffff; border-radius: 5px; padding: 4px 14px; font-weight: 600; }
-            QPushButton:hover { background: #eff6ff; border-color: #5e94df; }
-            QPushButton:disabled { color: #8b9ab0; background: #f8fafc; border-color: #dce5f0; }
-            QPushButton#primaryButton { color: white; background: #1967d2; border-color: #1967d2; font-size: 16px; }
-            QPushButton#primaryButton:hover { background: #1158ba; }
-            QPushButton#secondaryButton { color: #1260c7; border-color: #8cb4e8; background: #ffffff; font-size: 16px; }
-            QTableWidget { background: white; alternate-background-color: #f8fbff; border: 1px solid #d7e1ef; gridline-color: #dce5f0; selection-background-color: #e8f1ff; }
-            QHeaderView::section { background: #f7f9fc; border: 0; border-right: 1px solid #dce5f0; border-bottom: 1px solid #dce5f0; padding: 7px; font-weight: 700; }
-            QCheckBox, QRadioButton { spacing: 7px; font-size: 14px; }
-            QCheckBox::indicator, QRadioButton::indicator { width: 16px; height: 16px; }
-            QLineEdit { min-height: 26px; border: 1px solid #c7d5e7; border-radius: 4px; background: white; padding: 2px 7px; }
-            QLabel#subtleText { color: #64748b; }
-            QLabel#detailText { color: #64748b; font-size: 12px; margin-left: 25px; }
-            QLabel#badge { color: #0b7650; background: #e4f8ee; border-radius: 11px; padding: 3px 8px; font-weight: 700; }
+            QLabel#versionLabel { color: #a9c8f2; background: transparent; font-size: 13px; font-weight: 600; }
+            QToolButton#titleButton { border: 0; padding: 0; min-width: 38px; min-height: 34px; background: transparent;
+                                      color: #dbeafe; font-size: 15px; font-weight: 600; border-radius: 6px; }
+            QToolButton#titleButton:hover { background: rgba(255, 255, 255, 0.16); color: white; }
+            QToolButton#titleButton[role="close"]:hover { background: #d93025; color: white; }
+            QGroupBox { background: white; border: 1px solid #dde5ee; border-radius: 10px; margin-top: 15px;
+                        padding: 12px 2px 8px 2px; font-weight: 700; color: #0f2947; }
+            QGroupBox::title { subcontrol-origin: margin; left: 14px; padding: 0 6px; color: #4a5b71; }
+            QPushButton { min-height: 32px; border: 1px solid #ccd8e8; background: #ffffff; border-radius: 8px;
+                          padding: 4px 16px; font-weight: 600; color: #24405f; }
+            QPushButton:hover { background: #f1f6fe; border-color: #7aa8e6; }
+            QPushButton:disabled { color: #9aa8bb; background: #f4f7fb; border-color: #e3e9f1; }
+            QPushButton#primaryButton { color: white; border: 0; font-size: 16px; min-height: 42px; border-radius: 10px;
+                                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2b7cf0, stop:1 #1a5fd0); }
+            QPushButton#primaryButton:hover { background: #1550b8; }
+            QPushButton#secondaryButton { color: #1f5cb8; border-color: #b7cdec; background: #ffffff; font-size: 15px;
+                                          min-height: 42px; border-radius: 10px; }
+            QTableWidget { background: white; alternate-background-color: #f7fafd; border: 1px solid #e6ecf3;
+                           border-radius: 8px; gridline-color: #edf1f6; selection-background-color: #e3efff;
+                           selection-color: #16202e; }
+            QHeaderView::section { background: #f2f6fb; border: 0; border-bottom: 1px solid #e1e8f1; padding: 8px;
+                                   font-weight: 700; color: #46586f; }
+            QCheckBox, QRadioButton { spacing: 8px; font-size: 14px; }
+            QCheckBox::indicator, QRadioButton::indicator { width: 17px; height: 17px; }
+            QLineEdit { min-height: 30px; border: 1px solid #ccd8e8; border-radius: 8px; background: #fbfdff; padding: 2px 10px; }
+            QLineEdit:focus { border-color: #2b7cf0; background: white; }
+            QLabel { background: transparent; }
+            QLabel#subtleText { color: #6b7a8d; }
+            QLabel#detailText { color: #7b8798; font-size: 12px; margin-left: 25px; }
+            QLabel#badge { color: #0b7650; background: #e4f8ee; border-radius: 10px; padding: 3px 9px; font-weight: 700; }
             QLabel#badge[kind="IP"], QLabel#badge[kind="EMAIL"], QLabel#badge[kind="ADDRESS"] { color: #1768d4; background: #e5f1ff; }
-            QLabel#badge[kind="RRN"], QLabel#badge[kind="API_KEY"], QLabel#badge[kind="PASSWORD"] { color: #ed6812; background: #fff0e5; }
+            QLabel#badge[kind="RRN"], QLabel#badge[kind="API_KEY"], QLabel#badge[kind="PASSWORD"] { color: #d1600a; background: #fff1e3; }
             QLabel#badge[kind="ACCOUNT"] { color: #4b5565; background: #eef2f7; }
             QToolButton#linkButton { color: #1768d4; border: 0; background: transparent; font-weight: 700; }
-            QStatusBar { background: white; border-top: 1px solid #dce5f0; color: #526277; }
+            QStatusBar { background: #ffffff; border-top: 1px solid #e1e8f1; color: #5b6b80; }
+            QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
+            QScrollBar::handle:vertical { background: #c8d4e2; border-radius: 5px; min-height: 30px; }
+            QScrollBar::add-line, QScrollBar::sub-line { height: 0; width: 0; }
         """
 
 
