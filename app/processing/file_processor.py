@@ -13,6 +13,7 @@ from app.core.models import Detection, FileAnalysis, PreviewRow
 from app.core.overlap_resolver import resolve_overlaps
 
 from .encoding import detect_encoding
+from .structured_documents import STRUCTURED_DOCUMENT_EXTENSIONS, rewrite_document
 
 
 class ProcessingStopped(RuntimeError):
@@ -39,7 +40,6 @@ class FileProcessor:
         preview_limit: int = 0,
     ) -> FileAnalysis:
         analysis = FileAnalysis(path=str(path))
-        encoding = detect_encoding(path)
         output = self.output_path(path)
         temporary = output.with_name(f".{output.name}.{uuid.uuid4().hex}.tmp")
         try:
@@ -47,17 +47,30 @@ class FileProcessor:
                 backup_dir = path.parent / "backup"
                 backup_dir.mkdir(exist_ok=True)
                 shutil.copy2(path, backup_dir / path.name)
-            with path.open("r", encoding=encoding, newline="") as source, temporary.open(
-                "w", encoding=encoding, newline=""
-            ) as target:
-                for original, detections in self._segments(source):
-                    self._check_stopped()
-                    findings = resolve_overlaps(detections)
-                    deidentified, replacements = self.masker.apply(original, findings, mode, custom_text)
-                    target.write(deidentified)
-                    analysis.replacements += replacements
-                    self._add_counts(analysis, findings)
-                    self._add_preview_rows(analysis, original, deidentified, findings, preview_limit)
+            if path.suffix.lower() in STRUCTURED_DOCUMENT_EXTENSIONS:
+                rewrite_document(
+                    path,
+                    temporary,
+                    lambda text: self._process_text(
+                        text, analysis, mode, custom_text, preview_limit
+                    ),
+                )
+            else:
+                encoding = detect_encoding(path)
+                with path.open("r", encoding=encoding, newline="") as source, temporary.open(
+                    "w", encoding=encoding, newline=""
+                ) as target:
+                    for original, detections in self._segments(source):
+                        target.write(
+                            self._process_text(
+                                original,
+                                analysis,
+                                mode,
+                                custom_text,
+                                preview_limit,
+                                detections,
+                            )
+                        )
             os.replace(temporary, output)
         except Exception:
             temporary.unlink(missing_ok=True)
@@ -102,6 +115,25 @@ class FileProcessor:
                 safe_findings = [finding for finding in all_findings if finding.end <= cut]
                 buffer = buffer[cut:]
                 yield segment, safe_findings
+
+    def _process_text(
+        self,
+        original: str,
+        analysis: FileAnalysis,
+        mode: str,
+        custom_text: str,
+        preview_limit: int,
+        detections: list[Detection] | None = None,
+    ) -> str:
+        self._check_stopped()
+        findings = resolve_overlaps(
+            detections if detections is not None else self.detector.detect(original, self.enabled)
+        )
+        deidentified, replacements = self.masker.apply(original, findings, mode, custom_text)
+        analysis.replacements += replacements
+        self._add_counts(analysis, findings)
+        self._add_preview_rows(analysis, original, deidentified, findings, preview_limit)
+        return deidentified
 
     def _add_preview_rows(
         self,

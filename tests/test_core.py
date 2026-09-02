@@ -5,15 +5,58 @@ import threading
 import unittest
 from random import Random
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from app.core.masker import Masker, MaskingMode
 from app.core.models import Detection
 from app.core.overlap_resolver import resolve_overlaps
+from app.core.policies import SUPPORTED_EXTENSIONS, is_supported_file
 from app.core.regex_detector import RegexDetector
 from app.processing.file_processor import FileProcessor
 
 
 class CoreRegressionTests(unittest.TestCase):
+    def test_office_extensions_are_supported_for_file_selection(self) -> None:
+        expected = {".xls", ".xlsx", ".docx", ".doc", ".hwp", ".hwpx"}
+        self.assertTrue(expected <= set(SUPPORTED_EXTENSIONS))
+        with tempfile.TemporaryDirectory() as directory:
+            for extension in expected:
+                path = Path(directory) / f"sample{extension.upper()}"
+                path.write_text("sample", encoding="utf-8")
+                self.assertTrue(is_supported_file(path))
+
+    def test_open_xml_documents_are_rewritten_without_touching_source(self) -> None:
+        documents = {
+            ".docx": ("phone=010-1234-5678", "PHONE"),
+            ".xlsx": ("email=abc@example.com", "EMAIL"),
+            ".hwpx": ("ip=192.168.0.1", "IP"),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for extension, (text, kind) in documents.items():
+                with self.subTest(extension=extension):
+                    source = root / f"sample{extension}"
+                    xml = (
+                        '<?xml version="1.0" encoding="UTF-8"?>'
+                        '<document xmlns="urn:test"><t>'
+                        f"{text}"
+                        "</t></document>"
+                    ).encode()
+                    with ZipFile(source, "w", ZIP_DEFLATED) as archive:
+                        archive.writestr("content.xml", xml)
+                    original = source.read_bytes()
+
+                    result = FileProcessor(
+                        RegexDetector(), {kind}, Masker(), threading.Event()
+                    ).deidentify_file(source, MaskingMode.AUTO, "", False, 10)
+
+                    output = source.with_name(f"sample_deid{extension}")
+                    with ZipFile(output) as archive:
+                        rewritten = archive.read("content.xml").decode()
+                    self.assertEqual(source.read_bytes(), original)
+                    self.assertEqual(result.counts[kind], 1)
+                    self.assertIn(f"[{kind}_1]", rewritten)
+
     def test_overlap_resolution_matches_previous_selection_rules(self) -> None:
         random = Random(20260827)
         detections = [

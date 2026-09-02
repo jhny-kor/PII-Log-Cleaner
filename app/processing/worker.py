@@ -12,6 +12,7 @@ from app.core.masker import Masker, MaskingMode
 from app.core.models import RunResult
 from app.processing.encoding import EncodingDetectionError
 from app.processing.file_processor import FileProcessor, ProcessingStopped
+from app.processing.structured_documents import StructuredDocumentError
 from app.report.csv_report import write_csv_report
 
 
@@ -104,6 +105,8 @@ class ProcessingWorker(QObject):
     def _message_for(error: Exception) -> str:
         if isinstance(error, EncodingDetectionError):
             return "인코딩을 자동으로 확인하지 못했습니다."
+        if isinstance(error, StructuredDocumentError):
+            return "문서 형식을 읽지 못했습니다. 파일이 손상되었거나 지원되지 않는 형식입니다."
         if isinstance(error, PermissionError):
             return "파일을 읽을 권한이 없습니다."
         if isinstance(error, OSError) and error.errno == errno.ENOSPC:

@@ -8,7 +8,7 @@ TEXT = {
     "remove_selected": "− 선택 제거",
     "remove_all": "전체 제거",
     "selected_files": "선택된 파일 수: {count}개",
-    "supported_formats": "* 지원 형식: .log, .txt, .out, .csv, .sql",
+    "supported_formats": "* 지원 형식: .log, .txt, .out, .csv, .sql, .xls, .xlsx, .docx, .doc, .hwp, .hwpx",
     "drag_drop_hint": "파일 또는 폴더를 목록으로 끌어 놓을 수 있습니다.",
     "file_path": "파일 경로",
     "size": "크기",

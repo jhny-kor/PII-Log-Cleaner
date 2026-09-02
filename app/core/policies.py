@@ -3,7 +3,19 @@ from __future__ import annotations
 from pathlib import Path
 
 
-SUPPORTED_EXTENSIONS = (".log", ".txt", ".out", ".csv", ".sql")
+SUPPORTED_EXTENSIONS = (
+    ".log",
+    ".txt",
+    ".out",
+    ".csv",
+    ".sql",
+    ".xls",
+    ".xlsx",
+    ".docx",
+    ".doc",
+    ".hwp",
+    ".hwpx",
+)
 
 TYPE_LABELS = {
     "PERSON": "이름",
