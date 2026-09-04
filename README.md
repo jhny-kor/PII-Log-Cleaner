@@ -34,6 +34,8 @@ PII Log Cleaner의 자체 작성 소스 코드와 문서는 [Apache License 2.0]
 
 ## 모델 라이선스와 배포 조건
 
+모델 원문과 스냅샷 정보는 [Hugging Face의 `schift-io/schift-ko-pii-v6` 저장소](https://huggingface.co/schift-io/schift-ko-pii-v6)에서 확인할 수 있습니다.
+
 `schift-io/schift-ko-pii-v6` 모델은 **Apache-2.0이 아닌 [Schift License v2.0](https://huggingface.co/schift-io/schift-ko-pii-v6/blob/main/LICENSE)**으로 배포됩니다. 이 라이선스는 Apache License 2.0을 기반으로 하지만, 최근 완료 회계연도 기준 연 매출이 미화 1,000만 달러를 초과하는 법인의 상업적 사용에는 별도 상용 라이선스를 요구하는 추가 조건이 있습니다. 연구·교육·평가·개인 프로젝트·비영리 단체 사용은 매출과 무관하게 허용된다고 모델 라이선스에 명시되어 있습니다.
 
 따라서 이 저장소의 `Apache-2.0` 표기는 PII Log Cleaner의 자체 작성 코드·문서에만 적용되며, 모델 가중치·모델 코드에는 적용되지 않습니다. Windows 설치파일을 배포할 때는 모델 스냅샷에 포함된 원본 `LICENSE*` 파일을 변경하지 않고 함께 포함해야 합니다. 빌드 스크립트가 이를 확인하며, 상세 고지는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 제공합니다. 모델 라이선스는 배포 전 해당 스냅샷의 원문으로 다시 확인하세요.
