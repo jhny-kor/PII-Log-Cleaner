@@ -328,7 +328,6 @@ class MainWindow(QMainWindow):
             ("전화번호", 3, 1),
             ("날짜", 4, 0),
             ("API Key / 비밀번호", 4, 1),
-            ("기타 식별정보", 5, 1),
         )
         self.detect_boxes: dict[str, QCheckBox] = {}
         for label, row, column in positions:
@@ -338,7 +337,7 @@ class MainWindow(QMainWindow):
             grid.addWidget(box, row, column)
         layout.addLayout(grid)
         layout.addStretch()
-        note = QLabel("* 선택한 항목만 탐지 및 치환됩니다.", group)
+        note = QLabel("* 선택한 항목만 탐지 및 치환됩니다.\n* v7 모델은 조직명 탐지를 지원하지 않습니다.", group)
         note.setObjectName("subtleText")
         layout.addWidget(note)
         return group

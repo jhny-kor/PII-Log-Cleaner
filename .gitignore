@@ -10,9 +10,9 @@ dist/
 
 # The source-controlled model is split below Git hosting file-size limits.
 # build-windows.ps1 verifies and restores the ignored original before packaging.
-models/schift-ko-pii-v6/.cache/
-models/schift-ko-pii-v6/model.safetensors
-models/schift-ko-pii-v6/*.partial
+models/schift-ko-pii-v*/.cache/
+models/schift-ko-pii-v*/model.safetensors
+models/schift-ko-pii-v*/*.partial
 
 # Keep only the final UI verification evidence.
 artifacts/*

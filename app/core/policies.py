@@ -43,7 +43,6 @@ UI_TYPE_TO_CODES = {
     "이메일": {"EMAIL"},
     "날짜": {"DATE"},
     "API Key / 비밀번호": {"API_KEY", "PASSWORD"},
-    "기타 식별정보": {"IDENTIFIER"},
 }
 
 TOKEN_LABELS = {
@@ -61,7 +60,7 @@ TOKEN_LABELS = {
     "IDENTIFIER": "IDENTIFIER",
 }
 
-MODEL_TYPES = {"PERSON", "ADDRESS", "IDENTIFIER"}
+MODEL_TYPES = {"PERSON", "ADDRESS"}
 
 
 def enabled_codes(labels: set[str]) -> set[str]:

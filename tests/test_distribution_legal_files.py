@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import shutil
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -9,6 +13,38 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DistributionLegalFilesTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("pwsh"), "PowerShell 7 is not installed")
+    def test_build_verifies_restored_and_existing_weights(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            weights = b"bundled v7 weights"
+            (root / "model.safetensors.part-000").write_bytes(weights)
+            (root / "model.safetensors.sha256").write_text(hashlib.sha256(weights).hexdigest())
+            script = root / "verify.ps1"
+            script.write_text('''param($BuildScript, $Snapshot)
+$ErrorActionPreference = "Stop"
+$tokens = $null; $errors = $null
+$ast = [System.Management.Automation.Language.Parser]::ParseFile($BuildScript, [ref]$tokens, [ref]$errors)
+if ($errors.Count) { throw ($errors | Out-String) }
+$fn = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq "Restore-ModelWeights" }, $false)
+Invoke-Expression $fn.Extent.Text
+Restore-ModelWeights $Snapshot
+Restore-ModelWeights $Snapshot
+$weights = Join-Path $Snapshot "model.safetensors"
+foreach ($target in @($weights, (Join-Path $Snapshot "model.safetensors.part-000"))) {
+    [System.IO.File]::WriteAllBytes($target, [byte[]](1, 2, 3))
+    $rejected = $false
+    try { Restore-ModelWeights $Snapshot } catch { $rejected = $true }
+    if (-not $rejected) { throw "Corrupt weights accepted: $target" }
+    if (Test-Path $weights) { Remove-Item $weights }
+}
+''', encoding="utf-8")
+            result = subprocess.run(
+                ["pwsh", "-NoProfile", "-File", str(script), str(ROOT / "build-windows.ps1"), directory],
+                capture_output=True, text=True, timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_legal_files_are_present_and_packaged(self) -> None:
         license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
         notice_text = (ROOT / "NOTICE").read_text(encoding="utf-8")
@@ -42,7 +78,12 @@ class DistributionLegalFilesTests(unittest.TestCase):
         self.assertNotIn("IconFilename=", installer_script)
 
     def test_bundled_model_parts_match_the_recorded_sha256(self) -> None:
-        model_dir = ROOT / "models" / "schift-ko-pii-v6"
+        model_dir = ROOT / "models" / "schift-ko-pii-v7"
+        manifest = json.loads((model_dir / "schift_heads.json").read_text(encoding="utf-8"))
+        self.assertEqual({tower["entity_group"] for tower in manifest["towers"]}, {"private_person", "private_address"})
+        build_script = (ROOT / "build-windows.ps1").read_text(encoding="utf-8")
+        self.assertIn('"schift_heads.json"', build_script)
+        self.assertIn('models\\schift-ko-pii-v7', build_script)
         parts = sorted(model_dir.glob("model.safetensors.part-*"))
         expected = (model_dir / "model.safetensors.sha256").read_text(encoding="utf-8").split()[0]
 
@@ -59,6 +100,7 @@ class DistributionLegalFilesTests(unittest.TestCase):
         requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
 
         self.assertIn("transformers==5.15.0", requirements)
+        self.assertIn("schift-ko-pii==0.6.0", requirements)
         self.assertIn("huggingface-hub>=1.5,<2", requirements)
 
 

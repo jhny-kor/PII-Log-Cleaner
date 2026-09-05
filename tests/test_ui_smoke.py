@@ -40,6 +40,8 @@ class WindowSmokeTests(unittest.TestCase):
             window = MainWindow(root / "missing-model", allow_regex_only=True)
             window.show()
             try:
+                self.assertNotIn("기타 식별정보", window.detect_boxes)
+                self.assertEqual(len(window.detect_boxes), 10)
                 self._wait_until(lambda: window.detector is not None)
                 window.add_paths([source])
                 window.start_analysis()

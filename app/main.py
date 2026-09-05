@@ -19,7 +19,7 @@ def main() -> int:
     parser.add_argument("--demo", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--allow-regex-only", action="store_true", help=argparse.SUPPRESS)
     args, _unknown = parser.parse_known_args()
-    return launch(bundle_root() / "models" / "schift-ko-pii-v6", args.allow_regex_only, args.demo)
+    return launch(bundle_root() / "models" / "schift-ko-pii-v7", args.allow_regex_only, args.demo)
 
 
 if __name__ == "__main__":

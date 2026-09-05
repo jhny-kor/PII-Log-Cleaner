@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from app.core.model_detector import OfflineSchiftDetector
+from app.core.model_detector import ModelUnavailableError, OfflineSchiftDetector
 from app.runtime import bundle_root
 
 
@@ -24,22 +25,46 @@ class RuntimePathTests(unittest.TestCase):
             for name in OfflineSchiftDetector._REQUIRED_FILES:
                 (model_dir / name).write_bytes(b"model")
             detector = OfflineSchiftDetector(model_dir)
-            hub = SimpleNamespace(hf_hub_download=lambda *_args, **_kwargs: "network")
-            model = SimpleNamespace(HF_MODEL_ID="", AutoTokenizer=None, AutoConfig=None)
+            model = SimpleNamespace()
             loaded = []
 
+            def set_model_id(path: str) -> None:
+                model.HF_MODEL_ID = path
+                model.cached_model = None
+
+            model.set_model_id = set_model_id
+            model.cached_model = "previous model"
+
             def load_model() -> None:
-                loaded.append(hub.hf_hub_download(model.HF_MODEL_ID, "model.safetensors"))
+                self.assertIsNone(model.cached_model)
+                self.assertEqual(model.HF_MODEL_ID, str(model_dir.resolve()))
+                self.assertEqual(os.environ["HF_HUB_OFFLINE"], "1")
+                self.assertEqual(os.environ["TRANSFORMERS_OFFLINE"], "1")
+                loaded.extend(model._hf_download(name) for name in ("schift_heads.json", "model.safetensors"))
 
             model._load_model = load_model
 
-            def import_module(name: str) -> object:
-                return model if name == "schift_ko_pii.detect" else hub
-
-            with patch("app.core.model_detector.importlib.import_module", side_effect=import_module):
+            with patch("app.core.model_detector.importlib.import_module", return_value=model) as imports, patch.dict(
+                os.environ, {"HF_HUB_OFFLINE": "0", "TRANSFORMERS_OFFLINE": "0"}
+            ):
+                detector.load()
                 detector.load()
 
-            self.assertEqual(loaded, [str(model_dir / "model.safetensors")])
+            imports.assert_called_once_with("schift_ko_pii.detect")
+            self.assertEqual(loaded, [str(model_dir.resolve() / name) for name in ("schift_heads.json", "model.safetensors")])
+            with self.assertRaises(FileNotFoundError):
+                model._hf_download("missing.json")
+
+    def test_model_loader_rejects_snapshot_without_v7_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            model_dir = Path(directory)
+            for name in OfflineSchiftDetector._REQUIRED_FILES:
+                if name != "schift_heads.json":
+                    (model_dir / name).write_bytes(b"model")
+            with patch("app.core.model_detector.importlib.import_module") as imports:
+                with self.assertRaises(ModelUnavailableError):
+                    OfflineSchiftDetector(model_dir).load()
+            imports.assert_not_called()
 
     def test_model_detector_uses_package_windowing_once_per_file_segment(self) -> None:
         calls: list[str] = []

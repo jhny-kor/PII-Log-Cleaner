@@ -1,0 +1,15 @@
+{
+  "split": 4,
+  "towers": [
+    {
+      "entity_group": "private_address",
+      "decode": "bioes5",
+      "adapter_dim": 256
+    },
+    {
+      "entity_group": "private_person",
+      "decode": "parts9",
+      "adapter_dim": null
+    }
+  ]
+}

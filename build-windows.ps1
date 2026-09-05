@@ -18,7 +18,7 @@ $ProjectLicense = Join-Path $ProjectRoot "LICENSE"
 $ProjectNotice = Join-Path $ProjectRoot "NOTICE"
 $ThirdPartyNotices = Join-Path $ProjectRoot "THIRD_PARTY_NOTICES.md"
 $AppIcon = Join-Path $ProjectRoot "resources\icons\branding\pii-log-cleaner-icon.ico"
-$BundledModelPath = Join-Path $ProjectRoot "models\schift-ko-pii-v6"
+$BundledModelPath = Join-Path $ProjectRoot "models\schift-ko-pii-v7"
 
 function Test-PythonRuntime {
     param(
@@ -93,12 +93,6 @@ function Resolve-Iscc {
 function Restore-ModelWeights {
     param([string]$Snapshot)
     $weights = Join-Path $Snapshot "model.safetensors"
-    if (Test-Path -LiteralPath $weights -PathType Leaf) { return }
-
-    $parts = @(Get-ChildItem -LiteralPath $Snapshot -File -Filter "model.safetensors.part-*" -ErrorAction SilentlyContinue | Sort-Object Name)
-    if ($parts.Count -eq 0) {
-        throw "번들 모델 가중치 조각을 찾지 못했습니다: $Snapshot"
-    }
     $checksumPath = Join-Path $Snapshot "model.safetensors.sha256"
     if (-not (Test-Path -LiteralPath $checksumPath -PathType Leaf)) {
         throw "번들 모델 SHA-256 파일을 찾지 못했습니다: $checksumPath"
@@ -106,6 +100,18 @@ function Restore-ModelWeights {
     $expected = ((Get-Content -LiteralPath $checksumPath -Raw).Trim() -split "\s+")[0].ToLowerInvariant()
     if ($expected -notmatch "^[a-f0-9]{64}$") {
         throw "번들 모델 SHA-256 형식이 올바르지 않습니다: $checksumPath"
+    }
+    if (Test-Path -LiteralPath $weights -PathType Leaf) {
+        $actual = (Get-FileHash -LiteralPath $weights -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actual -ne $expected) {
+            throw "기존 모델 가중치의 SHA-256 검증에 실패했습니다. model.safetensors를 삭제하고 다시 빌드해주세요."
+        }
+        return
+    }
+
+    $parts = @(Get-ChildItem -LiteralPath $Snapshot -File -Filter "model.safetensors.part-*" -ErrorAction SilentlyContinue | Sort-Object Name)
+    if ($parts.Count -eq 0) {
+        throw "번들 모델 가중치 조각을 찾지 못했습니다: $Snapshot"
     }
 
     $partial = "$weights.$PID.partial"
@@ -128,9 +134,9 @@ function Restore-ModelWeights {
 function Assert-ModelSnapshot {
     param([string]$Snapshot)
     if (-not (Test-Path -LiteralPath $Snapshot -PathType Container)) {
-        throw "모델 스냅샷 폴더가 없습니다: $Snapshot`n모델 가중치는 저장소에 포함되지 않습니다. schift-ko-pii-v6을 내려받아 추출한 실제 폴더를 -ModelPath로 지정해주세요."
+        throw "모델 스냅샷 폴더가 없습니다: $Snapshot`nmodels\schift-ko-pii-v7 폴더를 포함한 저장소를 다시 받아주세요."
     }
-    $required = @("config.json", "tokenizer.json", "tokenizer_config.json", "model.safetensors", "modeling_lfm2_bidirectional.py")
+    $required = @("config.json", "tokenizer.json", "tokenizer_config.json", "model.safetensors", "modeling_lfm2_bidirectional.py", "schift_heads.json")
     $missing = $required | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Snapshot $_) -PathType Leaf) }
     if ($missing) {
         throw "모델 스냅샷에 필수 파일이 없습니다: $($missing -join ', ')"
@@ -178,7 +184,7 @@ $env:TRANSFORMERS_OFFLINE = "1"
     --workpath $PyInstallerWork `
     --distpath $PyInstallerDist `
     --specpath $BuildRoot `
-    --add-data "$ModelSnapshot;models\schift-ko-pii-v6" `
+    --add-data "$ModelSnapshot;models\schift-ko-pii-v7" `
     --add-data "$(Join-Path $ProjectRoot 'resources');resources" `
     --add-data "$ProjectLicense;." `
     --add-data "$ProjectNotice;." `

@@ -24,14 +24,13 @@ class OfflineSchiftDetector:
         "tokenizer_config.json",
         "model.safetensors",
         "modeling_lfm2_bidirectional.py",
+        "schift_heads.json",
     )
     _LABELS = {
         "private_person": "PERSON",
         "person": "PERSON",
         "private_address": "ADDRESS",
         "address": "ADDRESS",
-        "private_organization": "IDENTIFIER",
-        "organization": "IDENTIFIER",
     }
     _PERSON_SURNAMES = frozenset("김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구민진지엄채원천방공현함변염여추도석선설마길연위표명기")
     _PERSON_STOPWORDS = frozenset(
@@ -49,7 +48,7 @@ class OfflineSchiftDetector:
     )
 
     def __init__(self, model_dir: Path) -> None:
-        self.model_dir = model_dir
+        self.model_dir = model_dir.resolve()
         self._module = None
         self._lock = threading.Lock()
 
@@ -66,15 +65,11 @@ class OfflineSchiftDetector:
                 return
             try:
                 module = importlib.import_module("schift_ko_pii.detect")
-                module.HF_MODEL_ID = str(self.model_dir)
-                # schift-ko-pii imports this function inside _load_model.
-                hub = importlib.import_module("huggingface_hub")
-                hub.hf_hub_download = self._local_model_file
-                self._force_local_loading(module, "AutoTokenizer")
-                self._force_local_loading(module, "AutoConfig")
-                loader = getattr(module, "_load_model", None)
-                if callable(loader):
-                    loader()
+                module.set_model_id(str(self.model_dir))
+                # 0.6.0 resolves the manifest and weights through this private hook.
+                # Tokenizer/config/custom code load directly from the same local directory.
+                module._hf_download = self._local_model_file
+                module._load_model()
             except Exception as exc:  # Never show internals or source text in the user UI.
                 raise ModelUnavailableError("개인정보 탐지 엔진을 초기화하지 못했습니다.") from exc
             self._module = module
@@ -87,7 +82,7 @@ class OfflineSchiftDetector:
 
         try:
             # schift-ko-pii already tokenizes and overlaps long input internally.
-            items = self._module.detect(text, postprocess=False, normalize=False)
+            items = self._module.detect(text, postprocess=False, normalize=False, extended=False)
         except Exception as exc:
             raise ModelUnavailableError("개인정보 탐지 엔진을 초기화하지 못했습니다.") from exc
 
@@ -124,21 +119,8 @@ class OfflineSchiftDetector:
             and value not in cls._PERSON_STOPWORDS
         )
 
-    def _local_model_file(self, _repo_id: str, filename: str, **_kwargs: object) -> str:
+    def _local_model_file(self, filename: str) -> str:
         candidate = self.model_dir / filename
         if not candidate.is_file():
             raise FileNotFoundError(filename)
         return str(candidate)
-
-    @staticmethod
-    def _force_local_loading(module: object, name: str) -> None:
-        loader_class = getattr(module, name, None)
-        original = getattr(loader_class, "from_pretrained", None)
-        if not callable(original):
-            return
-
-        def local_from_pretrained(path: str, *args: object, **kwargs: object) -> object:
-            kwargs["local_files_only"] = True
-            return original(path, *args, **kwargs)
-
-        loader_class.from_pretrained = local_from_pretrained
